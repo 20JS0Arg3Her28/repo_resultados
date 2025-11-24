@@ -219,7 +219,6 @@ docker compose up -d
 ```bash
 # Ver logs
 docker compose logs -f elasticsearch
-![alt text](./PASO2/image.png)
 
 # Esperar este mensaje:
 # "Cluster health status changed from [YELLOW] to [GREEN]"
@@ -235,8 +234,7 @@ docker compose logs -f elasticsearch
 ```bash
 curl http://localhost:9200/_cluster/health|pretty
 ```
-![alt text](./PASO2/image0.png)
-![alt text](./PASO2/image1.png)
+
 **Salida esperada**:
 ```json
 {
@@ -258,7 +256,6 @@ curl http://localhost:9200/_cluster/health|pretty
 ```bash
 curl http://localhost:9200
 ```
-![alt text](./PASO2/image2.png)
 
 **Salida esperada**:
 ```json
@@ -283,7 +280,6 @@ curl -X POST "http://localhost:9200/test-index/_doc" \
     "timestamp": "2025-11-04T10:00:00Z"
   }'
 ```
-![alt text](imag3.png)
 
 **Respuesta**:
 ```json
@@ -304,7 +300,6 @@ curl "http://localhost:9200/test-index/_search|pretty"
 ```bash
 curl "http://localhost:9200/_cat/indices|v"
 ```
-![alt text](image4.png)
 
 **Salida**:
 ```
@@ -345,8 +340,6 @@ POST /mi-indice/_update/id-documento
   }
 }
 ```
-![alt text](./PASO2/image5.png)
-![alt text](./PASO2/image6.png)
 
 #### 4. **Eliminar**
 ```bash
@@ -455,195 +448,3 @@ Ver: `PASO_3_KIBANA.md`
 - [x] Importancia de persistencia
 
 <p align="right">(<a href="#readme-top">Ir al inicio</a>)</p>
-
-
-
-
-
-
-jsargher@jsargher-G7-7588:~/Documents/UVG/DesarrolloSeguro/proyecto_2$ curl -X POST "http://localhost:9200/test-index/_doc" \
-  -H 'Content-Type: application/json' \
-  -d '{
-    "message": "Test log entry",
-    "timestamp": "2025-11-04T10:00:00Z"
-  }'
-{"_index":"test-index","_id":"omn4mZoBF0I1r_-wIRFt","_version":1,"result":"created","_shards":{"total":2,"successful":1,"failed":0},"_seq_no":3,"_primary_term":1}jsargher@jsargher-G7-7588:~/Documents/UVG/DesarrolloSeguro/proyecto_2$ curl "http://localhost:9200/test-index/_search?pretty"
-{
-  "took" : 6,
-  "timed_out" : false,
-  "_shards" : {
-    "total" : 1,
-    "successful" : 1,
-    "skipped" : 0,
-    "failed" : 0
-  },
-  "hits" : {
-    "total" : {
-      "value" : 4,
-      "relation" : "eq"
-    },
-    "max_score" : 1.0,
-    "hits" : [
-      {
-        "_index" : "test-index",
-        "_id" : "nWnamZoBF0I1r_-wAhFC",
-        "_score" : 1.0,
-        "_source" : {
-          "message" : "Test log entry",
-          "timestamp" : "2025-11-18T10:00:00Z"
-        }
-      },
-      {
-        "_index" : "test-index",
-        "_id" : "nmnomZoBF0I1r_-wBxGQ",
-        "_score" : 1.0,
-        "_source" : {
-          "message" : "Test log entry PASO 2",
-          "timestamp" : "2025-11-18T11:00:00Z"
-        }
-      },
-      {
-        "_index" : "test-index",
-        "_id" : "n2npmZoBF0I1r_-wZxGN",
-        "_score" : 1.0,
-        "_source" : {
-          "message" : "Test log entry",
-          "timestamp" : "2025-11-04T10:00:00Z"
-        }
-      },
-      {
-        "_index" : "test-index",
-        "_id" : "omn4mZoBF0I1r_-wIRFt",
-        "_score" : 1.0,
-        "_source" : {
-          "message" : "Test log entry",
-          "timestamp" : "2025-11-04T10:00:00Z"
-        }
-      }
-    ]
-  }
-}
-jsargher@jsargher-G7-7588:~/Documents/UVG/DesarrolloSeguro/proyecto_2$ curl "http://localhost:9200/_cat/indices?v"
-health status index      uuid                   pri rep docs.count docs.deleted store.size pri.store.size dataset.size
-yellow open   mi-indice  8eGx6_v8SI2igU7C3MjrPg   1   1          1            0      6.3kb          6.3kb        6.3kb
-yellow open   test-index _yowexlGRFahBdhJP3jutA   1   1          4            0     19.6kb         19.6kb       19.6kb
-jsargher@jsargher-G7-7588:~/Documents/UVG/DesarrolloSeguro/proyecto_2$ curl -X POST "http://localhost:9200/test-index/_update/TU_ID_AQUI" \
-  -H 'Content-Type: application/json' \
-  -d '{
-    "doc": {
-      "message": "Updated test log entry"
-    }
-  }'
-{"error":{"root_cause":[{"type":"document_missing_exception","reason":"[TU_ID_AQUI]: document missing","index_uuid":"_yowexlGRFahBdhJP3jutA","shard":"0","index":"test-index"}],"type":"document_missing_exception","reason":"[TU_ID_AQUI]: document missing","index_uuid":"_yowexlGRFahBdhJP3jutA","shard":"0","index":"test-index"},"status":404}jsargher@jsargher-G7-7588:~/Djsargher@jsargher-G7-7588:~/Documents/UVG/DesarrolloSeguro/proyecto_2$ curl -X POST "http://localhost:9200/test-index/_update/omn4mZoBF0I1r_-wIRFt" \
-  -H 'Content-Type: application/json' \
-  -d '{
-    "doc": {
-      "message": "Updated test log entry"
-    }
-  }'
-{"_index":"test-index","_id":"omn4mZoBF0I1r_-wIRFt","_version":2,"result":"updated","_shards":{"total":2,"successful":1,"failed":0},"_seq_no":4,"_primary_term":1}jsargher@jsargher-G7-7588:~/Documents/UVG/DesarrolloSeguro/proyecto_2$ curl "http://localhost:9200/test-index/_search?pretty"
-{
-  "took" : 4,
-  "timed_out" : false,
-  "_shards" : {
-    "total" : 1,
-    "successful" : 1,
-    "skipped" : 0,
-    "failed" : 0
-  },
-  "hits" : {
-    "total" : {
-      "value" : 4,
-      "relation" : "eq"
-    },
-    "max_score" : 1.0,
-    "hits" : [
-      {
-        "_index" : "test-index",
-        "_id" : "nWnamZoBF0I1r_-wAhFC",
-        "_score" : 1.0,
-        "_source" : {
-          "message" : "Test log entry",
-          "timestamp" : "2025-11-18T10:00:00Z"
-        }
-      },
-      {
-        "_index" : "test-index",
-        "_id" : "nmnomZoBF0I1r_-wBxGQ",
-        "_score" : 1.0,
-        "_source" : {
-          "message" : "Test log entry PASO 2",
-          "timestamp" : "2025-11-18T11:00:00Z"
-        }
-      },
-      {
-        "_index" : "test-index",
-        "_id" : "n2npmZoBF0I1r_-wZxGN",
-        "_score" : 1.0,
-        "_source" : {
-          "message" : "Test log entry",
-          "timestamp" : "2025-11-04T10:00:00Z"
-        }
-      },
-      {
-        "_index" : "test-index",
-        "_id" : "omn4mZoBF0I1r_-wIRFt",
-        "_score" : 1.0,
-        "_source" : {
-          "message" : "Updated test log entry",
-          "timestamp" : "2025-11-04T10:00:00Z"
-        }
-      }
-    ]
-  }
-}
-jsargher@jsargher-G7-7588:~/Documents/UVG/DesarrolloSeguro/proyecto_2$ curl -X DELETE "http://localhost:9200/test-index/_doc/omn4mZoBF0I1r_-wIRFt"
-{"_index":"test-index","_id":"omn4mZoBF0I1r_-wIRFt","_version":3,"result":"deleted","_shards":{"total":2,"successful":1,"failed":0},"_seq_no":5,"_primary_term":1}jsargher@jsargher-G7-7588:~/Documents/UVG/DesarrolloSeguro/proyecto_2$ curl "http://localhost:9200/test-index/_search?pretty"
-{
-  "took" : 8,
-  "timed_out" : false,
-  "_shards" : {
-    "total" : 1,
-    "successful" : 1,
-    "skipped" : 0,
-    "failed" : 0
-  },
-  "hits" : {
-    "total" : {
-      "value" : 3,
-      "relation" : "eq"
-    },
-    "max_score" : 1.0,
-    "hits" : [
-      {
-        "_index" : "test-index",
-        "_id" : "nWnamZoBF0I1r_-wAhFC",
-        "_score" : 1.0,
-        "_source" : {
-          "message" : "Test log entry",
-          "timestamp" : "2025-11-18T10:00:00Z"
-        }
-      },
-      {
-        "_index" : "test-index",
-        "_id" : "nmnomZoBF0I1r_-wBxGQ",
-        "_score" : 1.0,
-        "_source" : {
-          "message" : "Test log entry PASO 2",
-          "timestamp" : "2025-11-18T11:00:00Z"
-        }
-      },
-      {
-        "_index" : "test-index",
-        "_id" : "n2npmZoBF0I1r_-wZxGN",
-        "_score" : 1.0,
-        "_source" : {
-          "message" : "Test log entry",
-          "timestamp" : "2025-11-04T10:00:00Z"
-        }
-      }
-    ]
-  }
-}
-jsargher@jsargher-G7-7588:~/Documents/UVG/DesarrolloSeguro/proyecto_2$ 
-
