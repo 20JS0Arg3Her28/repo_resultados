@@ -29,11 +29,17 @@
 ## Resumen Ejecutivo
 
 ### Descripción del Proyecto
-[Describe en 2-3 párrafos qué es el proyecto, qué tecnologías se usaron y qué se logró]
+Este proyecto implementa un sistema completo de monitoreo y detección de amenazas utilizando el stack ELK (Elasticsearch, Logstash, Kibana) junto con OWASP Juice Shop como aplicación vulnerable para pruebas de seguridad. El sistema captura logs HTTP en tiempo real a través de un proxy Nginx, los procesa con Filebeat, los almacena en Elasticsearch y los visualiza en Kibana.
+
+El objetivo principal es poder simular ataques (Red Team) y detectarlos mediante reglas automatizadas (Blue Team), permitiendo el análisis forense de tráfico malicioso incluyendo SQL Injection, Cross-Site Scripting (XSS) y scanning de directorios.
+
+La arquitectura implementada captura cada request HTTP con su payload completo, incluyendo parámetros de query string donde típicamente se inyectan ataques, permitiendo la detección, análisis y respuesta a incidentes de seguridad en tiempo real.
+
+
 
 ### Objetivos Cumplidos
-- [ ] Sistema ELK Stack completamente funcional
-- [ ] Logs recolectándose en tiempo real
+- [x] Sistema ELK Stack completamente funcional
+- [x] Logs recolectándose en tiempo real
 - [ ] Visualizaciones y dashboards creados
 - [ ] Reglas de detección configuradas
 - [ ] Vulnerabilidades identificadas y documentadas
@@ -49,8 +55,8 @@
 ### Tiempo Invertido
 | Fase | Tiempo Estimado | Tiempo Real |
 |------|----------------|-------------|
-| Paso 1: Juice Shop | 30 min | ___ min |
-| Paso 2: Elasticsearch | 45 min | ___ min |
+| Paso 1: Juice Shop | 30 min | 10 min |
+| Paso 2: Elasticsearch | 45 min | 20 min |
 | Paso 3: Kibana | 45 min | ___ min |
 | Paso 4: Filebeat | 1 hora | ___ min |
 | Paso 5: Visualización | 1.5 horas | ___ min |
