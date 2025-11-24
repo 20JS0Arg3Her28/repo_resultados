@@ -216,7 +216,10 @@ docker compose up -d
 
 **Output**:
 ```
-[Pegar output]
+jsargher@jsargher-G7-7588:~/Documents/UVG/DesarrolloSeguro/proyecto_2$ docker compose up -d
+[+] Running 2/2
+ ✔ Container elasticsearch  Started                                                                                                                                                0.2s 
+ ✔ Container juice-shop     Started 
 ```
 
 #### 2.2 Verificar salud del cluster
@@ -226,7 +229,23 @@ curl http://localhost:9200/_cluster/health?pretty
 
 **Output**:
 ```json
-[Pegar JSON de respuesta]
+{
+  "cluster_name" : "docker-cluster",
+  "status" : "yellow",
+  "timed_out" : false,
+  "number_of_nodes" : 1,
+  "number_of_data_nodes" : 1,
+  "active_primary_shards" : 39,
+  "active_shards" : 39,
+  "relocating_shards" : 0,
+  "initializing_shards" : 0,
+  "unassigned_shards" : 10,
+  "delayed_unassigned_shards" : 0,
+  "number_of_pending_tasks" : 0,
+  "number_of_in_flight_fetch" : 0,
+  "task_max_waiting_in_queue_millis" : 0,
+  "active_shards_percent_as_number" : 79.59183673469387
+}
 ```
 
 #### 2.3 Crear documento de prueba
@@ -241,7 +260,7 @@ curl -X POST "http://localhost:9200/test-index/_doc" \
 
 **Output**:
 ```json
-[Pegar respuesta]
+{"_index":"test-index","_id":"csLes5oBthfGOb5eKyDA","_version":1,"result":"created","_shards":{"total":2,"successful":1,"failed":0},"_seq_no":6,"_primary_term":5}
 ```
 
 #### 2.4 Verificar índices
@@ -251,36 +270,125 @@ curl "http://localhost:9200/_cat/indices?v"
 
 **Output**:
 ```
-[Pegar output]
+health status index                                 uuid                   pri rep docs.count docs.deleted store.size pri.store.size dataset.size
+yellow open   filebeat-docker-2025.11.16            4jyvbGnkRX600sJuMLqRRg   1   1        259            0    138.5kb        138.5kb      138.5kb
+yellow open   filebeat-juice-shop-2025.11.23        c7L_smbTSRmbo5OBp0fgIQ   1   1         18            0    103.1kb        103.1kb      103.1kb
+yellow open   test-index                            _yowexlGRFahBdhJP3jutA   1   1          3            0     14.7kb         14.7kb       14.7kb
+yellow open   filebeat-juice-shop-2025.11.24        _pQt3ReCRJuUww3eoRkqCA   1   1         34            0    200.9kb        200.9kb      200.9kb
+yellow open   filebeat-nginx-2025.11.24             XieNSWLEQ0m6MlzFCkdpDg   1   1        121            0    165.5kb        165.5kb      165.5kb
+yellow open   filebeat-docker-2025.10.19            XMZJoBQmSIKc8rjxmLc6Yg   1   1         44            0     61.9kb         61.9kb       61.9kb
+yellow open   filebeat-docker-2025.11.23            BBu3-P40RHa4591dZHaIfw   1   1       1662            0      5.1mb          5.1mb        5.1mb
+yellow open   mi-indice                             8eGx6_v8SI2igU7C3MjrPg   1   1          1            0      6.3kb          6.3kb        6.3kb
+yellow open   .ds-filebeat-8.11.0-2025.11.23-000001 AXWk1FOUQYuQUPkciTNu4w   1   1          0            0       249b           249b         249b
+yellow open   filebeat-docker-2025.11.24            MIjDRFjqR8WvouKarHWbzw   1   1        730            0      3.2mb          3.2mb        3.2mb
 ```
+
+
+#### 2.4 Verificar índices
+```bash
+curl "http://localhost:9200/_cluster/stats?pretty"
+```
+
+**Output**:
+```
+{
+  "_nodes" : {
+    "total" : 1,
+    "successful" : 1,
+    "failed" : 0
+  },
+  "cluster_name" : "docker-cluster",
+  "cluster_uuid" : "uSv8ikccT9iELgoi6fy1Jw",
+  "timestamp" : 1763954881587,
+  "status" : "yellow",
+  "indices" : {
+    "count" : 39,
+    "shards" : {
+      "total" : 39,
+      "primaries" : 39,
+      "replication" : 0.0,
+      "index" : {
+        "shards" : {
+          "min" : 1,
+          "max" : 1,
+          "avg" : 1.0
+        },
+        "primaries" : {
+          "min" : 1,
+          "max" : 1,
+          "avg" : 1.0
+        },
+        "replication" : {
+          "min" : 0.0,
+          "max" : 0.0,
+          "avg" : 0.0
+        }
+      }
+    },
+    "docs" : {
+      "count" : 5515,
+      "deleted" : 423
+    },
+    "store" : {
+      "size_in_bytes" : 14245388,
+      "total_data_set_size_in_bytes" : 14245388,
+      "reserved_in_bytes" : 0
+    },
+    "fielddata" : {
+      "memory_size_in_bytes" : 0,
+      "evictions" : 0,
+      "global_ordinals" : {
+        "build_time_in_millis" : 0
+      }
+    },
+    "query_cache" : {
+      "memory_size_in_bytes" : 0,
+      "total_count" : 0,
+      "hit_count" : 0,
+      "miss_count" : 0,
+      "cache_size" : 0,
+      "cache_count" : 0,
+      "evictions" : 0
+    },
+    "completion" : {
+      "size_in_bytes" : 0
+    },...
+``` 
+
 
 ### Screenshots
 
 #### Screenshot 2.1: Servicios Corriendo
-![Servicios](./screenshots/paso-2/01-servicios.png)
+![Servicios Corriendo](./CAPTURAS/PASO2/paso1.png)
+
 
 **Descripción**: Docker compose ps mostrando juice-shop y elasticsearch corriendo.
 
 #### Screenshot 2.2: Cluster Health
-![Cluster Health](./screenshots/paso-2/02-cluster-health.png)
+![Cluster Health](/CAPTURAS//PASO2/paso2.png)
 
 **Descripción**: JSON mostrando estado "green" del cluster.
 
 #### Screenshot 2.3: Documento Creado
-![Documento](./screenshots/paso-2/03-documento-creado.png)
+![Documento](./CAPTURAS/PASO2/paso3.png)
 
 **Descripción**: Respuesta exitosa de creación de documento.
 
 #### Screenshot 2.4: Índices
-![Índices](./screenshots/paso-2/04-indices.png)
+![Índices](./CAPTURAS/PASO2/paso4.png)
 
 **Descripción**: Lista de índices mostrando test-index creado.
 
 #### Screenshot 2.5: [Agregar más según necesites]
+![Estadistica cluster](./CAPTURAS/PASO2/paso5.png)
+
+**Descripción**: Métricas generales del cluster (shards, docs, storage).
 
 ### Problemas Encontrados
 
-[Documentar problemas encontrados]
+Por ahora, no se encontraron problemas en la ejecucion de los comandos, al menos, no severos, al inicio se dificulto un poco
+el tema de poder crear el documento y eliminarlo, porque dependia de un inidice perse, y ese, al no tener conocimiento de, se
+dificultaba un poco y no se sabia si estaba bien o mal. De ahi, no hubieron problemas
 
 ### Verificación de Éxito
 
@@ -293,14 +401,79 @@ curl "http://localhost:9200/_cat/indices?v"
 
 ### Conceptos Aprendidos
 
-1. **Elasticsearch**: [Explicación]
-2. **Índices y Documentos**: [Explicación]
-3. **RESTful API**: [Explicación]
-4. **Cluster Health**: [Explicación]
+1. **Elasticsearch**: 
+Motor de búsqueda y análisis distribuido basado en Apache Lucene. Funciona como 
+una base de datos NoSQL especializada en almacenar, buscar y analizar grandes 
+volúmenes de datos en tiempo real.
+
+**Características principales**:
+- Búsqueda full-text extremadamente rápida
+- Escalabilidad horizontal (añadir más nodos)
+- Almacenamiento de documentos JSON
+- API RESTful para todas las operaciones\
+
+2. **Índices y Documentos**:
+**Índice**: Colección de documentos con características similares. Es equivalente 
+a una "base de datos" o "tabla" en sistemas relacionales. Ejemplo: `logs-2024`, 
+`usuarios`, `productos`.
+
+**Documento**: Unidad básica de información en formato JSON que se puede indexar. 
+Es equivalente a una "fila" o "registro". Cada documento tiene:
+- Un **ID único** (generado automáticamente o especificado)
+- **Campos** con datos (key-value pairs)
+- **Metadatos** (_index, _id, _version)
+
+3. **RESTful API**:
+#### 3. **RESTful API**
+Elasticsearch expone todas sus funcionalidades a través de una API REST usando 
+HTTP. Esto significa que puedes interactuar con él usando herramientas estándar 
+como curl, Postman, o cualquier cliente HTTP.
+
+**Verbos HTTP principales**:
+- **GET**: Leer datos (búsquedas, obtener documentos)
+- **POST**: Crear documentos (sin ID específico)
+- **PUT**: Crear/actualizar con ID específico
+- **DELETE**: Eliminar documentos o índices
+
+**Estructura de URLs**:
+```
+http://localhost:9200/{índice}/{tipo}/{id}
+```
+
+**Ejemplos**:
+```bash
+# GET: Buscar en todos los documentos
+GET http://localhost:9200/test-index/_search
+```
+
+4. **Cluster Health**:
+Estado de salud del cluster de Elasticsearch que indica qué tan bien está 
+funcionando el sistema. Se verifica con:
+```bash
+curl http://localhost:9200/_cluster/health
+```
+**Estados posibles**:
+
+| Estado | Color | Significado | ¿Es normal? |
+|--------|-------|-------------|-------------|
+| **GREEN** | 🟢 | Todos los shards primarios y réplicas están asignados | Perfecto |
+| **YELLOW** | 🟡 | Todos los shards primarios asignados, pero faltan algunas réplicas | Funcional, pero sin redundancia |
+| **RED** | 🔴 | Algunos shards primarios no están asignados | Pérdida de datos |
+
+**Métricas importantes**:
+- `number_of_nodes`: Cuántos nodos tiene el cluster
+- `active_primary_shards`: Shards primarios activos
+- `active_shards`: Total de shards (primarios + réplicas)
+- `unassigned_shards`: Shards sin asignar (causa de YELLOW/RED)
+
+**En nuestro caso**:
+- Estado: **YELLOW**
+- Razón: Solo tenemos 1 nodo, no hay dónde colocar réplicas
+- ¿Es problema?: No para desarrollo, sí para producción
 
 ### Tiempo Invertido
 - **Estimado**: 45 minutos
-- **Real**: ___ minutos
+- **Real**: 10 minutos
 
 ---
 
