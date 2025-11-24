@@ -1,10 +1,9 @@
 # Plantilla de Documentación - Proyecto ELK Stack
 
-**Nombre del Estudiante**: ___________________________  
-**Carnet**: ___________________________  
+**Nombre del Estudiante**: Astrid Glauser, Alejandro Martinez, Samuel Argueta  
+**Carnet**: 21299, 21430, 211024
 **Fecha de Inicio**: ___________________________  
-**Fecha de Entrega**: ___________________________  
-
+**Fecha de Entrega**: 25 de noviembre 2025
 ---
 
 ## 📋 Índice
@@ -367,7 +366,6 @@ curl "http://localhost:9200/_cluster/stats?pretty"
 #### Screenshot 2.1: Servicios Corriendo
 ![Servicios Corriendo](./CAPTURAS/PASO2/paso1.png)
 
-
 **Descripción**: Docker compose ps mostrando juice-shop y elasticsearch corriendo.
 
 #### Screenshot 2.2: Cluster Health
@@ -495,11 +493,83 @@ git checkout paso-3-kibana
 
 ### Comandos Ejecutados
 
-[Seguir el mismo formato que los pasos anteriores]
+#### 2 Levantar contenedaor
+```bash
+docker compose up -d
+```
+
+**Output**:
+```
+jsargher@jsargher-G7-7588:~/Documents/UVG/DesarrolloSeguro/proyecto_2$ docker compose up -d
+[+] Running 3/3
+ ✔ Container elasticsearch  Healthy                                                                                                                                                0.6s 
+ ✔ Container juice-shop     Running                                                                                                                                                0.0s 
+ ✔ Container kibana         Started   
+```
+
+#### 2.1 Ver logs de inicio de Kibana
+```bash
+docker compose logs -f kibana
+```
+
+**Output**:
+```
+kibana  | Kibana is currently running with legacy OpenSSL providers enabled! For details and instructions on how to disable see https://www.elastic.co/guide/en/kibana/8.11/production.html#openssl-legacy-provider
+kibana  | {"log.level":"info","@timestamp":"2025-11-24T03:39:29.246Z","log":{"logger":"elastic-apm-node"},"agentVersion":"4.0.0","env":{"pid":7,"proctitle":"/usr/share/kibana/bin/../node/bin/node","os":"linux 6.14.0-35-generic","arch":"x64","host":"990dacde1431","timezone":"UTC+00","runtime":"Node.js v18.18.2"},"config":{"serviceName":{"source":"start","value":"kibana","commonName":"service_name"},"serviceVersion":{"source":"start","value":"8.11.0","commonName":"service_version"},"serverUrl":{"source":"start","value":"https://kibana-cloud-apm.apm.us-east-1.aws.found.io/","commonName":"server_url"},"logLevel":{"source":"default","value":"info","commonName":"log_level"},"active":{"source":"start","value":true},"contextPropagationOnly":{"source":"start","value":true},"environment":{"source":"start","value":"production"},"globalLabels":{"source":"start","value":[["git_rev","f2ea0c43ec0d854259d63d926b97e5c556b5f6b2"]],"sourceValue":{"git_rev":"f2ea0c43ec0d854259d63d926b97e5c556b5f6b2"}},"secretToken":{"source":"start","value":"[REDACTED]","commonName":"secret_token"},"breakdownMetrics":{"source":"start","value":false},"captureSpanStackTraces":{"source":"start","sourceValue":false},"centralConfig":{"source":"start","value":false},"metricsInterval":{"source":"start","value":120,"sourceValue":"120s"},"propagateTracestate":{"source":"start","value":true},"transactionSampleRate":{"source":"start","value":0.1,"commonName":"transaction_sample_rate"},"captureBody":{"source":"start","value":"off","commonName":"capture_body"},"captureHeaders":{"source":"start","value":false}},"activationMethod":"require","ecs":{"version":"1.6.0"},"message":"Elastic APM Node.js Agent v4.0.0"}
+kibana  | [2025-11-24T03:39:30.781+00:00][INFO ][root] Kibana is starting...```
+```
+
+#### 2.2 Verificar estado de Kibana
+```bash
+curl http://localhost:5601/api/status
+```
+
+**Output**:
+```
+{"name":"990dacde1431","uuid":"70a628cf-c00a-4aa2-a390-2c4a5ada114f","version":{"number":"8.11.0","build_hash":"f2ea0c43ec0d854259d63d926b97e5c556b5f6b2","build_number":68160,"build_snapshot":false,"build_date":"2023-11-04T11:05:45.363Z"},"status":{"overall":{"level":"available","summary":"All services are available"},"core":{"elasticsearch":{"level":"available","summary":"Elasticsearch is available","meta":{"warningNodes":[],"incompatibleNodes":[]}},"savedObjects":{"level":"available","summary":"SavedObjects service has completed migrations and is available","meta":{"migratedIndices":{"migrated":0,"skipped":0,"patched":6}}}},"plugins":{"licensing":{"level":"available","summary":"License fetched"},"banners":{"level":"available","summary":"All dependencies are available"},"customBranding":{"level":"available","summary":"All dependencies are available"},"features":{"level":"available","summary":"All dependencies are available"},"globalSearch":{"level":"available","summary":"All dependencies are available"},"mapsEms":{"level":"available","summary":"All dependencies are available"},"globalSearchProviders":{"level":"available","summary":"All dependencies are available"},"guidedOnboarding":{"level":"available","summary":"All dependencies are available"},"home":{"level":"available","summary":"All dependencies are available"},"console":{"level":"available","summary":"All dependencies are available"},"grokdebugger":{"level":"available","summary":"All dependencies are available"},"management":{"level":"available","summary":"All dependencies are available"},"painlessLab":{"level":"available","summary":"All dependencies are available"},"searchprofiler":{"level":"available","summary":"All dependencies are available"},"advancedSettings":{"level":"available","summary":"All dependencies are available"},"cloudDataMigration":{"level":"available","summary":"All dependencies are available"},"spaces":{"level":"available","summary":"All dependencies are available"},"eventLog":{"level":"available","summary":"All dependencies are available"},"security":{"level":"available","summary":"All dependencies are available"},"cloudLinks":{"level":"available","summary":"All dependencies are available"},"data":{"level":"available","summary":"All dependencies are available"},"encryptedSavedObjects":{"level":"available","summary":"All dependencies are available"},"files":{"level":"available","summary":"All dependencies are available"},"lists":{"level":"available","summary":"All dependencies are available"},"snapshotRestore":{"level":"available","summary":"All dependencies are available"},"telemetry":{"level":"available","summary":"All dependencies are available"},"actions":{"level":"available","summary":"All dependencies are available"},"apmDataAccess":{"level":"available","summary":"All dependencies are available"},"charts":{"level":"available","summary":"All dependencies are available"},"dataViewEditor":{"level":"available","summary":"All dependencies are available"},"dataViewFieldEditor":{"level":"available","summary":"All dependencies are available"},"ecsDataQualityDashboard":{"level":"available","summar...```
+```
+
+#### 2.3 Verificar índices desde la perspectiva de Kibana
+```bash
+curl http://localhost:5601/api/index_management/indices
+```
+
+**Output**:
+```
+[{"name":".apm-agent-configuration","primary":"1","replica":"0","isFrozen":false,"aliases":"none","hidden":true,"health":"green","status":"open","uuid":"6ipGp6j9Q2e6kWJE93JTnQ","documents":0,"documents_deleted":0,"size":"249b","primary_size":"249b","isRollupIndex":false,"ilm":{},"isFollowerIndex":false},{"name":".apm-custom-link","primary":"1","replica":"0","isFrozen":false,"aliases":"none","hidden":true,"health":"green","status":"open","uuid":"ntFhBi4HT66TtFZFrgjICg","documents":0,"documents_deleted":0,"size":"249b","primary_size":"249b","isRollupIndex":false,"ilm":{},"isFollowerIndex":false},{"name":".apm-source-map","primary":"1","replica":"0","isFrozen":false,"aliases":"none","hidden":true,"health":"green","status":"open","uuid":"L6kNcDmjSwKlWfuT0BQRMA","documents":0,"documents_deleted":0,"size":"249b","primary_size":"249b","isRollupIndex":false,"ilm":{},"isFollowerIndex":false},{"name":".async-search","primary":"1","replica":"0","isFrozen":false,"aliases":"none","hidden":true,"health":"green","status":"open","uuid":"U5TDTrRcSnaxiYgD4U2PyQ","documents":70,"documents_deleted":10,"size":"1003.98kb","primary_size":"1003.98kb","isRollupIndex":false,"ilm":{},"isFollowerIndex":false},{"name":".ds-.kibana-event-log-ds-2025.11.23-000001","primary":"1","replica":"0","isFrozen":false,"aliases":"none","hidden":true,"data_stream":".kibana-event-log-ds","health":"green","status":"open","uuid":"73_j2gzsRuOsh074f2cb_g","documents":4,"documents_deleted":0,"size":"24.4kb","primary_size":"24.4kb","isRollupIndex":false,"ilm":{},"isFollowerIndex":false},{"name":".ds-.logs-deprecation.elasticsearch-default-2025.11.23-000001","primary":"1","replica":"0","isFrozen":false,"aliases":"none","hidden":true,"data_stream":".logs-deprecation.elasticsearch-default","health":"green","status":"open","uuid":"Yvw3VioqSV6vQM8KqVd7dw","documents":2,"documents_deleted":0,"size":"24.63kb","primary_size":"24.63kb","isRollupIndex":false,"ilm":{},"isFollowerIndex":false},{"name":".ds-filebeat-8.11.0-2025.11.23-000001","primary":"1","replica":"1","isFrozen":false,"aliases":"none","hidden":true,"data_stream":"filebeat-8.11.0","health":"yellow","status":"open","uuid":"AXWk1FOUQYuQUPkciTNu4w","documents":0,"documents_deleted":0,"size":"249b","primary_size":"249b","isRollupIndex":false,"ilm":{"index":".ds-filebeat-8.11.0-2025.11.23-000001","managed":true,"policy":"filebeat","index_creation_date_millis":1763920299965,"time_since_index_creation":"10.07h","lifecycle_date_millis":1763920299965,"age":"10.07h","phase":"hot","phase_time_millis":1763920300057,"action":"rollover","action_time_millis":1763920300257,"step":"check-rollover-ready","step_time_millis":1763920300257,"phase_execution":{"policy":"filebeat","phase_definition":{"min_age":"0ms","actions":{"rollover":{"max_age":"30d","max_primary_shard_size":"50gb"}}},"version":1,"modified_date_in_millis":1763920298756}},"isFollowerIndex":false},{"name":".ds-ilm-history-5-2025.11.23-000001...
+```
+
+#### 2.3 Visitar interfaz 
+```bash
+http://localhost:5601
+```
 
 ### Screenshots
 
-[Mínimo 4 screenshots]
+#### Screenshot 2.1: Servicios Corriendo
+![Servicios Corriendo](./CAPTURAS/PASO3/paso1.png)
+
+**Descripción**: Docker compose ps mostrando kibana corriendo.
+
+#### Screenshot 2.2: Cluster Status
+![Estado de Kibana API](./CAPTURAS/PASO3/paso2.png)
+
+**Descripción**: JSON mostrando el estado de Kibana y su conexión con Elasticsearch.
+
+#### Screenshot 2.3: Kibana consultando Elasticsearch
+![Kibana consultando Elasticsearch](./CAPTURAS/PASO3/paso3.png)
+
+**Descripción**: Respuesta mostrando que Kibana puede comunicarse con Elasticsearch.
+
+#### Screenshot 2.4: Cluster Status
+![Kibana interfaz](./CAPTURAS/PASO3/paso4.png)
+
+**Descripción**: Logs desde Kibana.
+
+#### Screenshot 2.5: Dev Tools
+![Dev Tools](./CAPTURAS/PASO3/paso5.png)
+
+**Descripción**: Usabilida con Dev Tools.
 
 ### Problemas Encontrados
 
@@ -507,20 +577,78 @@ git checkout paso-3-kibana
 
 ### Verificación de Éxito
 
-- [ ] Kibana corriendo y healthy
-- [ ] Puerto 5601 accesible
-- [ ] Interfaz web funcional
-- [ ] Conectado a Elasticsearch
-- [ ] Dev Tools funcional
-- [ ] Screenshots capturados (4)
+- [x] Kibana corriendo y healthy
+- [x] Puerto 5601 accesible
+- [x] Interfaz web funcional
+- [x] Conectado a Elasticsearch
+- [x] Dev Tools funcional
+- [x] Screenshots capturados (4)
 
 ### Conceptos Aprendidos
 
-[Listar conceptos]
+#### 1. **Arquitectura ELK: Separación de Responsabilidades**
+- **Elasticsearch**: Motor de búsqueda y almacenamiento (Backend)
+- **Kibana**: Interfaz de visualización (Frontend)
+- **Analogía**: Elasticsearch = MySQL, Kibana = phpMyAdmin
+
+#### 2. **Docker Networking: DNS Interno**
+**Concepto clave**: Contenedores en la misma red se comunican por nombre de servicio.
+
+**Configuración crítica**:
+```yaml
+ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+```
+
+**¿Por qué "elasticsearch" y no "localhost"?**
+- Cada contenedor tiene su propio "localhost"
+- Docker DNS resuelve "elasticsearch" → IP del contenedor de Elasticsearch
+- Si Kibana usara "localhost:9200", buscaría en su propio contenedor (error)
+
+**Comprobado**:
+```bash
+# Desde tu máquina
+curl http://localhost:9200  Funciona
+
+# Desde contenedor Kibana (internamente)
+curl http://localhost:9200      No funciona
+curl http://elasticsearch:9200  Funciona
+```
+
+---
+
+#### 3. **Healthchecks y Orquestación de Servicios**
+**Problema sin healthcheck**:
+```
+t=0s:  Elasticsearch y Kibana inician simultáneamente
+t=5s:  Kibana intenta conectar a Elasticsearch → ERROR (aún no está listo)
+t=10s: Kibana se reinicia (retry)
+t=30s: Elasticsearch finalmente listo
+t=35s: Kibana conecta exitosamente
+```
+
+**Solución con `depends_on` + `condition: service_healthy`**:
+```yaml
+depends_on:
+  elasticsearch:
+    condition: service_healthy
+```
+
+**Resultado**:
+```
+t=0s:  Solo Elasticsearch inicia
+t=30s: Healthcheck de Elasticsearch pasa (HEALTHY)
+t=30s: Ahora Kibana inicia
+t=35s: Kibana conecta a la primera (sin reintentos)
+```
+
+**Beneficios**:
+- Menos reintentos y errores
+- Logs más limpios
+- Inicio más predecible
 
 ### Tiempo Invertido
 - **Estimado**: 45 minutos
-- **Real**: ___ minutos
+- **Real**: 25 minutos
 
 ---
 
