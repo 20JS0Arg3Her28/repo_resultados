@@ -511,6 +511,200 @@ En los logs del servidor, de Filebeat/Elasticsearch o de un WAF, se puede buscar
 Esta vulnerabilidad permite construir enlaces maliciosos que, al ser abiertos por usuarios legítimos (especialmente si están autenticados), comprometen la seguridad de sus sesiones y datos en OWASP Juice Shop.
 
 
+# Vulnerabilidad 3 — Inyección de Comandos vía Consola del Navegador
+
+**Clasificación**:  
+- OWASP A01:2021 – Broken Access Control  
+- OWASP A05:2021 – Security Misconfiguration  
+- Relacionada con OWASP A03:2021 – Injection (por el uso de SQLi en los comandos)  
+
+**Tipo**: Abuso de comandos JavaScript (`fetch`) para invocar endpoints internos y encadenar ataques (incluyendo SQL Injection y lectura de archivos).
+
+---
+
+## 1. Descripción técnica
+
+Durante las pruebas del Red Team se identificó que, una vez autenticado en OWASP Juice Shop, **no existe ninguna restricción a nivel de aplicación** sobre lo que el usuario puede ejecutar desde la consola del navegador.
+
+Un atacante puede abrir las DevTools (F12), ir a la pestaña **Console** y ejecutar comandos JavaScript que utilizan `fetch()` para:
+
+- Invocar **endpoints internos** no expuestos directamente en la interfaz:
+  - `/metrics`
+  - `/rest/admin/application-configuration`
+- **Encadenar SQL Injection** en `/rest/products/search` para extraer usuarios y contraseñas.
+- Leer archivos del servidor mediante **path traversal** en rutas como `/ftp/...`.
+
+Este comportamiento demuestra:
+
+- Falta de controles de autorización robustos en ciertos endpoints sensibles (Broken Access Control).
+- Falta de hardening o restricciones adicionales (Security Misconfiguration).
+- Potencial de explotación combinando estas llamadas con vulnerabilidades de inyección ya existentes (Injection).
+
+---
+
+## 2. Pasos concretos para reproducir
+
+### Paso 1 – Autenticarse en la aplicación
+
+1. Abrir la aplicación vulnerable:
+
+   ```text
+   http://localhost:3000/
+   ```
+
+2. Iniciar sesión con un usuario válido, por ejemplo la cuenta con rol `admin` creada previamente mediante la vulnerabilidad de Broken Access Control.
+
+---
+
+### Paso 2 – Abrir la consola del navegador
+
+1. Presionar `F12` o `Ctrl + Shift + I`.
+2. Ir a la pestaña **Console** del navegador.
+
+---
+
+### Paso 3 – Ejecutar comandos desde la consola
+
+#### Ejemplo 1 — Listar productos (verificación de acceso al endpoint)
+
+En la consola, ejecutar:
+
+```javascript
+fetch('/rest/products/search?q=')
+  .then(r => r.json())
+  .then(console.log)
+```
+
+**Resultado esperado**:
+
+- En la consola aparece un arreglo JSON con los productos existentes.
+- Se confirma que el usuario autenticado puede invocar directamente el endpoint `/rest/products/search` sin restricciones adicionales más allá de la sesión.
+
+---
+
+#### Ejemplo 2 — Extraer usuarios y contraseñas mediante SQL Injection
+
+En la misma consola, ejecutar:
+
+```javascript
+fetch("/rest/products/search?q=qwert'))UNION%20SELECT%20email,password,3,4,5,6,7,8,9%20FROM%20Users--")
+  .then(r => r.json())
+  .then(console.log)
+```
+
+**Qué hace este comando**:
+
+- Abusa del parámetro `q` en `/rest/products/search`.
+- Cierra la consulta original con `'))`.
+- Inyecta un `UNION SELECT` que devuelve `email` y `password` desde la tabla `Users`.
+- Comenta el resto de la consulta con `--`.
+
+**Resultado esperado**:
+
+- La respuesta mostrada en la consola ya no contiene solo productos.
+- Aparecen entradas donde:
+  - `name` o campos análogos muestran correos electrónicos de usuarios reales.
+  - Otros campos contienen los **hashes de contraseñas** almacenadas en la base de datos.
+- Se demuestra que:
+  - El comando JavaScript ejecutado desde el navegador llega al backend como una **consulta SQL inyectada**.
+  - Es posible extraer información sensible directamente desde la base de datos a través de la combinación:
+    - falta de controles de acceso fuertes, +
+    - endpoints internos, +
+    - vulnerabilidades de inyección.
+
+---
+
+## 3. Impacto probable (CID)
+
+| Componente       | Impacto | Descripción                                                                 |
+|------------------|--------:|------------------------------------------------------------------------------|
+| Confidencialidad |   Alta  | Exposición de usuarios, hashes de contraseñas, configuración interna y métricas. |
+| Integridad       |   Alta  | Uso de SQL Injection para manipular datos en la base (usuarios, productos, etc.). |
+| Disponibilidad   |   Media | Potencial abuso de endpoints internos para borrar datos o saturar recursos.     |
+
+---
+
+## 4. CVSS v3.1 — Score básico estimado
+
+Aunque no se trata de un RCE completo a nivel de sistema operativo, el impacto a nivel de aplicación es similar al de una inyección fuerte sobre recursos críticos.
+
+- **Puntaje sugerido**: 8.1 HIGH (rango 8.0–8.5 razonable según el contexto)
+- **Vector de ejemplo**:
+
+```text
+AV:N/AC:L/PR:L/UI:R/S:U/C:H/I:H/A:L
+```
+
+**Justificación de cada métrica**:
+
+- **AV:N (Attack Vector: Network)**  
+  El ataque se realiza remotamente vía HTTP dentro de una sesión válida contra la aplicación.
+
+- **AC:L (Attack Complexity: Low)**  
+  Solo requiere abrir la consola del navegador y pegar/ejecutar comandos.
+
+- **PR:L (Privileges Required: Low)**  
+  Se requiere estar autenticado, pero con **cualquier usuario válido** (no necesariamente administrador inicialmente).
+
+- **UI:R (User Interaction: Required)**  
+  El atacante debe autenticar y ejecutar los comandos manualmente en la consola.
+
+- **S:U (Scope: Unchanged)**  
+  El impacto se limita al propio sistema Juice Shop.
+
+- **C:H (Confidentiality: High)**  
+  Permite extraer correos, hashes de contraseñas y otros datos sensibles.
+
+- **I:H (Integrity: High)**  
+  Permite encadenar inyecciones que modifiquen datos de la aplicación.
+
+- **A:L (Availability: Low)**  
+  Es posible afectar parcialmente la disponibilidad (p. ej. saturar endpoints o manipular recursos), pero no necesariamente derribar todo el sistema de forma inmediata.
+
+---
+
+## 5. Pruebas de concepto (PoC) resumidas
+
+### PoC 1 — Llamada directa a endpoint desde consola
+
+1. Autenticarse en `http://localhost:3000/`.
+2. Abrir DevTools → pestaña **Console**.
+3. Ejecutar:
+
+   ```javascript
+   fetch('/rest/products/search?q=')
+     .then(r => r.json())
+     .then(console.log)
+   ```
+
+4. Observar en la consola el listado de productos devuelto por el backend.
+
+---
+
+### PoC 2 — Extracción de datos sensibles mediante SQLi desde la consola
+
+1. Mantener la sesión autenticada.
+2. En la misma consola, ejecutar:
+
+   ```javascript
+   fetch("/rest/products/search?q=qwert'))UNION%20SELECT%20email,password,3,4,5,6,7,8,9%20FROM%20Users--")
+     .then(r => r.json())
+     .then(console.log)
+   ```
+
+3. Verificar en la respuesta:
+
+   - Correos electrónicos (`email`) de usuarios reales.
+   - Hashes de contraseñas (`password`) asociados.
+
+4. Con esto se confirma que:
+
+   - La aplicación permite ejecutar comandos arbitrarios desde el contexto del navegador.
+   - No hay controles adicionales que limiten el uso de ciertos endpoints internos.
+   - Es posible encadenar llamadas legítimas (`fetch`) con inyecciones SQL para comprometer datos sensibles.
+
+---
+
 ## Paso 2: Elasticsearch
 
 ### Objetivo
