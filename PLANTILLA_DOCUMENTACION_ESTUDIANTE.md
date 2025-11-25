@@ -232,6 +232,8 @@ En el campo **Email** ingresar:
 ```text
 ' OR 1=1--
 ```
+<img width="940" height="485" alt="image" src="https://github.com/user-attachments/assets/b0052452-d84a-462a-b486-ca02e8d7edb5" />
+
 
 ##### Paso 3 — Contraseña
 
