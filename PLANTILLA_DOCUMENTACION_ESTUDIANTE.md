@@ -134,15 +134,6 @@ done
 - [x] Productos visibles
 - [x] URL correcta (localhost:3000)
 
-#### Screenshot 1.3: Curl Test
-![Curl Test](./screenshots/paso-1/03-curl-test.png)
-
-**Descripción**: Respuesta HTTP del servidor mostrando código 200 OK.
-
-#### Screenshot 1.4: Logs del Contenedor
-![Logs](./screenshots/paso-1/04-logs.png)
-
-**Descripción**: Logs mostrando el mensaje "Server listening on port 3000" y requests HTTP.
 
 
 ### Verificación de Éxito
