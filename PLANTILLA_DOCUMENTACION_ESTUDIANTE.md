@@ -999,62 +999,142 @@ GET /filebeat-juice-shop-*/_search
 ### Screenshots
 
 #### Screenshot 5.1: Creación de Data View
-![Data View](./screenshots/paso-5/01-data-view.png)
+![Data View](./CAPTURAS/PASO5/paso1.png)
+![](./CAPTURAS/PASO5/paso5.png)
 
 #### Screenshot 5.2: Discover con Logs
-![Discover](./screenshots/paso-5/02-discover.png)
+![Discover](./CAPTURAS/PASO5/paso2.png)
 
 #### Screenshot 5.3: Búsqueda KQL
-![KQL](./screenshots/paso-5/03-kql-search.png)
+![KQL](./CAPTURAS/PASO5/paso3.png)
 
 #### Screenshot 5.4: Log Expandido
-![Log Detail](./screenshots/paso-5/04-log-detail.png)
+![Log Detail](./CAPTURAS/PASO5/paso4.png)
 
 #### Screenshot 5.5: Visualización Pie Chart
-![Pie Chart](./screenshots/paso-5/05-pie-chart.png)
+![Pie Chart](./CAPTURAS/PASO5/pie.png)
 
 #### Screenshot 5.6: Visualización Line Chart
-![Line Chart](./screenshots/paso-5/06-line-chart.png)
+![Line Chart](./CAPTURAS/PASO5/lineChart.png)
 
 #### Screenshot 5.7: Visualización Table
-![Table](./screenshots/paso-5/07-table.png)
+![Table](./CAPTURAS/PASO5/table.png)
 
 #### Screenshot 5.8: Visualización Metric
-![Metric](./screenshots/paso-5/08-metric.png)
+![Metric](./CAPTURAS/PASO5/countLogs.png)
 
 #### Screenshot 5.9: Visualize Library
 ![Library](./screenshots/paso-5/09-library.png)
 
 #### Screenshot 5.10: Dashboard Completo
-![Dashboard](./screenshots/paso-5/10-dashboard.png)
+![Dashboard](./CAPTURAS/PASO5/dashboard.png)
 
 #### Screenshot 5.11: Dev Tools Query
-![Dev Tools](./screenshots/paso-5/11-dev-tools.png)
+![Dev Tools](./CAPTURAS/PASO5/devTools.png)
 
 #### Screenshot 5.12: Dashboard Interactivo
-![Interactive](./screenshots/paso-5/12-interactive.png)
+![Interactive](./CAPTURAS/PASO5/interactive.png)
 
 ### Problemas Encontrados
 
-[Documentar]
+Al momento de querer ver el trafico en terminos de ataques, no se puede completar bien.
+Se complico un poco el tema de las graficas, pero en terminos de simplemente no conocer
+como funciona el sistema como tal
 
 ### Verificación de Éxito
 
-- [ ] 2 Data Views creados
-- [ ] Discover funcional
-- [ ] Búsquedas KQL funcionando
-- [ ] Mínimo 4 visualizaciones creadas
-- [ ] Dashboard creado y funcional
-- [ ] Dev Tools con queries avanzadas
-- [ ] Screenshots capturados (12)
+- [x] 2 Data Views creados
+- [x] Discover funcional
+- [x] Búsquedas KQL funcionando
+- [x] Mínimo 4 visualizaciones creadas
+- [x] Dashboard creado y funcional
+- [x] Dev Tools con queries avanzadas
+- [x] Screenshots capturados (12)
 
 ### Conceptos Aprendidos
 
-[Listar conceptos]
+#### 1. **Data Views (Index Patterns)**
+- Definen qué índices de Elasticsearch son accesibles en Kibana
+- Usan wildcards (`*`) para incluir múltiples índices dinámicamente
+- Son prerequisito para usar Discover, Visualize y Dashboard
+- Reemplazaron el concepto antiguo de "Index Pattern" en versiones modernas de Kibana
+
+#### 2. **Discover - Explorador de logs**
+- Interfaz principal para exploración interactiva de logs
+- Permite agregar/quitar columnas para personalizar la vista
+- Los logs se pueden expandir para ver todos los campos en formato JSON
+- Soporta auto-refresh para monitoreo en tiempo real (útil para debugging)
+
+#### 3. **KQL (Kibana Query Language)**
+- Lenguaje de consulta simplificado para filtrar logs
+- Sintaxis básica: `campo: "valor"` o `campo: *patrón*`
+- Operadores lógicos: `AND`, `OR`, `NOT`
+- Más intuitivo que Lucene para usuarios no técnicos
+- Ejemplo: `container.name: "juice-shop" AND message: *error*`
+
+#### 4. **Tipos de visualizaciones en Kibana**
+- **Pie/Bar Chart**: Distribución porcentual o absoluta de categorías
+- **Line Chart**: Tendencias y volumen de datos a lo largo del tiempo
+- **Data Table**: Lista ordenada de valores con contadores
+- **Metric**: KPI mostrado como número grande para monitoreo rápido
+- Cada tipo tiene casos de uso específicos según el análisis requerido
+
+#### 5. **Aggregations en Elasticsearch**
+- Operaciones de análisis sobre conjuntos de documentos
+- **Terms aggregation**: Agrupa por valores únicos (ej: nombres de contenedores)
+- **Count**: Cuenta documentos que coinciden con criterios
+- **Date histogram**: Agrupa eventos por intervalos de tiempo
+- Base de todas las visualizaciones en Kibana
+
+#### 6. **Dashboard interactivo**
+- Combina múltiples visualizaciones en una vista unificada
+- Los filtros aplicados afectan TODAS las visualizaciones simultáneamente
+- Click en cualquier visualización crea filtros que se aplican al resto
+- Permite crear vistas personalizadas para diferentes roles (devs, ops, management)
+
+#### 7. **Dev Tools Console**
+- Acceso directo a la API REST de Elasticsearch
+- Ejecuta queries JSON complejas no disponibles en la UI
+- Útil para debugging, análisis avanzado y scripting
+- Incluye autocompletado de sintaxis y campos
+- Ejemplo de uso: agregaciones complejas, bulk operations
+
+#### 8. **Field types en Elasticsearch**
+- **keyword**: Texto exacto sin análisis, para filtros y agregaciones
+- **text**: Texto analizado y tokenizado, para búsqueda full-text
+- **date**: Timestamps para rangos temporales
+- **numeric** (long, float): Para cálculos y rangos numéricos
+- La diferencia afecta cómo se pueden usar en visualizaciones
+
+#### 9. **Time range selector**
+- Controla el periodo de tiempo visible en todas las vistas
+- Opciones: absolute (fechas fijas) o relative (últimas X horas/días)
+- Quick selects: Last 15m, 1h, 24h, 7d, 30d, 90d
+- Afecta todas las visualizaciones y búsquedas en el contexto actual
+- Crítico para análisis histórico vs monitoreo en tiempo real
+
+#### 10. **Visualize Library - Reutilización de componentes**
+- Biblioteca centralizada de todas las visualizaciones creadas
+- Las visualizaciones son reutilizables en múltiples dashboards
+- Se pueden editar desde la biblioteca (cambios se reflejan en todos los dashboards)
+- Facilita estandarización y colaboración en equipos
+- Permite compartir y versionar visualizaciones
+
+#### 11. **Buckets vs Metrics**
+- **Metrics**: Cálculos sobre datos (Count, Sum, Average, etc.)
+- **Buckets**: Agrupaciones de documentos (Terms, Date Histogram, Range)
+- Las visualizaciones combinan ambos: buckets determinan el eje X, metrics el eje Y
+- Ejemplo: "Count (metric) de logs por container.name (bucket)"
+
+#### 12. **Índices con wildcard patterns**
+- Patrones como `filebeat-*` permiten consultar múltiples índices simultáneamente
+- Útil para índices con rotación diaria: `filebeat-2025.11.23`, `filebeat-2025.11.24`
+- Optimiza queries al distribuir carga entre múltiples índices
+- Facilita políticas de retención (eliminar índices antiguos por fecha)
 
 ### Tiempo Invertido
 - **Estimado**: 1.5 horas
-- **Real**: ___ minutos
+- **Real**: 45 minutos
 
 ---
 
