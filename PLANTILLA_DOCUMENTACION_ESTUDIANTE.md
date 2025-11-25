@@ -736,7 +736,8 @@ El objetivo de este paso era entender cómo está implementado el flujo de regis
 
 > **Espacio para captura – Figura 1**  
 > Formulario de registro de usuarios en `/#/register` antes de cualquier manipulación.  
-> *(Aquí se insertará la captura del formulario de registro.)*
+<img width="790" height="1036" alt="image" src="https://github.com/user-attachments/assets/911ce339-1675-4074-bcfe-c4a610d1f878" />
+
 
 En la **Figura 2** se observa la pantalla de OWASP Juice Shop a la izquierda y, a la derecha, las DevTools de Chrome en la pestaña **Network**. Se selecciona la petición `POST /api/Users` y se abre el menú contextual sobre ella, eligiendo la opción:
 
@@ -746,14 +747,16 @@ Esto evidencia el paso donde el atacante intercepta la petición legítima de re
 
 > **Espacio para captura – Figura 2**  
 > DevTools mostrando la petición `POST /api/Users` y el menú “Copy as cURL (cmd)”.  
-> *(Aquí se insertará la captura de DevTools.)*
+<img width="940" height="646" alt="image" src="https://github.com/user-attachments/assets/4f0f54d9-7a5a-4b89-94a4-302d299dc0ee" />
+
 
 Finalmente, en la **Figura 3** se muestra la consola de Windows donde se ejecuta el comando `curl` derivado de la petición de registro, ahora modificado para incluir el campo adicional `"role": "admin"` en el cuerpo JSON.  
 La respuesta del servidor devuelve `"status": "success"` y muestra que se creó el usuario `adminultimate@prueba.com` con `"role": "admin"`, demostrando el **Broken Access Control**, ya que un usuario no autenticado puede autoasignarse privilegios de administrador alterando el cuerpo de la petición.
 
 > **Espacio para captura – Figura 3**  
 > Consola de Windows ejecutando el `curl` modificado y respuesta JSON con `"role": "admin"`.  
-> *(Aquí se insertará la captura de la consola con la respuesta del servidor.)*
+<img width="940" height="152" alt="image" src="https://github.com/user-attachments/assets/00ebddc1-4c04-4151-acb4-7f279f661a38" />
+
 
 ---
 
@@ -932,20 +935,44 @@ AV:N/AC:L/PR:N/UI:R/S:U/C:H/I:H/A:L
 
 ---
 
-#### 7. Evidencia (capturas sugeridas)
+#### 7. Explicación de por qué funciona la vulnerabilidad
 
-- **Figura 1 – Formulario de registro**  
-  Formulario de registro de usuarios en `/#/register` antes de la explotación.  
-  *(Espacio para captura del formulario.)*
+Esta vulnerabilidad existe porque el **control de acceso está implementado solo en el frontend y no en el backend**, lo cual rompe el principio básico de seguridad de “nunca confiar en el cliente”.
 
-- **Figura 2 – Copia de la petición como cURL**  
-  DevTools en la pestaña **Network**, mostrando la petición `POST /api/Users` y la opción  
-  `Copy → Copy as cURL (cmd)`.  
-  *(Espacio para captura de DevTools.)*
+A nivel técnico ocurre lo siguiente:
 
-- **Figura 3 – Ejecución del cURL modificado**  
-  Consola de Windows ejecutando el comando `curl` modificado con `"role": "admin"` y la respuesta JSON con `"status": "success"` y `"role": "admin"`.  
-  *(Espacio para captura de la consola con la respuesta.)*
+- El **formulario de registro** (`/#/register`) solo muestra campos para:
+  - `email`
+  - `password`
+  - `passwordRepeat`
+  - `securityQuestion`
+  - `securityAnswer`
+
+  En ningún momento la interfaz permite elegir un rol ni muestra el campo `role`.
+
+- Sin embargo, el **endpoint del backend** `POST /api/Users`:
+  - **Acepta parámetros adicionales** en el cuerpo JSON, incluyendo `"role"`.
+  - **No valida** que el campo `"role"` solo pueda ser establecido por un usuario con privilegios de administrador.
+  - **No ignora ni limpia** el campo `"role"` cuando la petición proviene de un usuario no autenticado.
+
+- Esto significa que un atacante puede:
+  - Capturar la petición legítima de registro (por ejemplo, con DevTools → Network → *Copy as cURL*).
+  - Modificar el cuerpo JSON e **inyectar** `"role": "admin"` junto con los demás campos.
+  - Reenviar la petición manipulada directamente al servidor.
+
+- Como el backend:
+  - **Confía ciegamente** en los datos recibidos.
+  - **No aplica reglas de autorización** sobre la asignación de roles.
+  
+  termina **creando el usuario con rol `admin`** y devolviendo una respuesta `status: "success"` donde el objeto de usuario ya incluye `"role": "admin"`.
+
+La vulnerabilidad funciona porque:
+
+1. El backend **no implementa controles de autorización** para la creación de usuarios con privilegios altos.
+2. Se permite **“mass assignment”** de campos sensibles (como `role`) desde el cliente.
+3. Cualquier usuario anónimo puede **autoasignarse rol de administrador** simplemente modificando el JSON de la petición, sin necesidad de explotar errores complejos ni tener una cuenta previa.
+
+
 
 ## Paso 2: Elasticsearch
 
