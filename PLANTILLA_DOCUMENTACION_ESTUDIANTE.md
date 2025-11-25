@@ -83,30 +83,21 @@ git checkout paso-1-juice-shop
 docker compose up -d
 ```
 
-**Output**:
-```
-[Pegar el output del comando aquí]
-```
+
 
 #### 1.2 Verificar estado
 ```bash
 docker compose ps
 ```
 
-**Output**:
-```
-[Pegar el output del comando aquí]
-```
+
 
 #### 1.3 Probar conectividad
 ```bash
 curl -I http://localhost:3000
 ```
 
-**Output**:
-```
-[Pegar el output del comando aquí]
-```
+
 
 #### 1.4 Generar logs de prueba
 ```bash
@@ -117,10 +108,7 @@ for i in {1..10}; do
 done
 ```
 
-**Output**:
-```
-[Pegar el output del comando aquí]
-```
+
 
 ### Screenshots
 
@@ -156,22 +144,6 @@ done
 
 **Descripción**: Logs mostrando el mensaje "Server listening on port 3000" y requests HTTP.
 
-### Problemas Encontrados
-
-#### Problema 1: [Descripción del problema]
-**Error**: 
-```
-[Mensaje de error exacto]
-```
-
-**Causa**: [Explicación de por qué ocurrió]
-
-**Solución**: 
-```bash
-[Comandos para resolver]
-```
-
-**Resultado**: [Qué pasó después de aplicar la solución]
 
 ### Verificación de Éxito
 
