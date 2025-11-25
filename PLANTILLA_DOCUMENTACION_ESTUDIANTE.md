@@ -662,34 +662,232 @@ Implementar Filebeat para recolectar logs de Docker y enviarlos a Elasticsearch.
 git checkout paso-4-filebeat
 ```
 
+
 ### Comandos Ejecutados
 
-[Documentar todos los comandos]
+#### 2.1 Levantar los servicios
+```bash
+docker compose logs filebeat | head -30
+```
+
+**Output**:
+```
+[+] Running 4/4
+ ✔ Container juice-shop     Running                                                                                                                                                0.0s 
+ ✔ Container elasticsearch  Healthy                                                                                                                                                0.5s 
+ ✔ Container filebeat       Running                                                                                                                                                0.0s 
+ ✔ Container kibana         Running   
+
+```
+
+#### 2.2 Verificar que Filebeat inició
+```bash
+docker compose logs filebeat | grep -i "elasticsearch\|kibana\|pipeline"
+```
+
+**Output**:
+```
+filebeat  | {"log.level":"info","@timestamp":"2025-11-25T02:48:08.900Z","log.logger":"esclientleg","log.origin":{"file.name":"eslegclient/connection.go","file.line":122},"message":"elasticsearch url: http://elasticsearch:9200","service.name":"filebeat","ecs.version":"1.6.0"}
+filebeat  | {"log.level":"info","@timestamp":"2025-11-25T02:48:08.901Z","log.logger":"publisher","log.origin":{"file.name":"pipeline/module.go","file.line":105},"message":"Beat name: ba7dbee50138","service.name":"filebeat","ecs.version":"1.6.0"}
+filebeat  | {"log.level":"info","@timestamp":"2025-11-25T02:48:08.904Z","log.logger":"kibana","log.origin":{"file.name":"kibana/client.go","file.line":183},"message":"Kibana url: http://kibana:5601","service.name":"filebeat","ecs.version":"1.6.0"}
+filebeat  | {"log.level":"info","@timestamp":"2025-11-25T02:48:10.260Z","log.logger":"kibana","log.origin":{"file.name":"kibana/client.go","file.line":183},"message":"Kibana url: http://kibana:5601","service.name":"filebeat","ecs.version":"1.6.0"}
+filebeat  | {"log.level":"info","@timestamp":"2025-11-25T02:48:38.914Z","log.logger":"monitoring","log.origin":{"file.name":"log/log.go","file.line":187},"message":"Non-zero metrics in the last 30s","service.name":"filebeat","monitoring":{"metrics":{"beat":{"cgroup":{"cpu":{"id":"/"},"memory":{"id":"/","mem":{"usage":{"bytes":179027968}}}},"cpu":{"system":{"ticks":140,"time":{"ms":140}},"total":{"ticks":1970,"time":{"ms":1970},"value":1970},"user":{"ticks":1830,"time":{"ms":1830}}},"handles":{"limit":{"hard":1048576,"soft":1048576},"open":11},"info":{"ephemeral_id":"9684cd3e-598c-4c23-838a-f18d1828810b","name":"filebeat","uptime":{"ms":30085},"version":"8.11.0"},"memstats":{"gc_next":56580104,"memory_alloc":43070144,"memory_sys":158059816,"memory_total":509823664,"rss":146305024},"runtime":{"goroutines":21}},"filebeat":{"harvester":{"open_files":0,"running":0}},"libbeat":{"config":{"module":{"running":0}},"output":{"events":{"active":0},"type":"elasticsearch"},"pipeline":{"clients":0,"events":{"active":0},"queue":{"max_events":4096}}},"registrar":{"states":{"current":0}},"system":{"cpu":{"cores":12},"load":{"1":1.19,"15":1.27,"5":1.43,"norm":{"1":0.0992,"15":0.1058,"5":0.1192}}}},"ecs.version":"1.6.0"}}...
+```
+
+#### 2.3 Ver el estado de los contenedores
+```bash
+docker compose ps
+```
+
+**Output**:
+```
+NAME            IMAGE                                                  COMMAND                  SERVICE         CREATED          STATUS                 PORTS
+elasticsearch   docker.elastic.co/elasticsearch/elasticsearch:8.11.0   "/bin/tini -- /usr/l…"   elasticsearch   24 hours ago     Up 9 hours (healthy)   0.0.0.0:9200->9200/tcp, [::]:9200->9200/tcp, 0.0.0.0:9300->9300/tcp, [::]:9300->9300/tcp
+filebeat        docker.elastic.co/beats/filebeat:8.11.0                "/usr/bin/tini -- /u…"   filebeat        30 minutes ago   Up 30 minutes          
+juice-shop      proyecto_2-juice-shop                                  "/nodejs/bin/node /j…"   juice-shop      24 hours ago     Up 9 hours             0.0.0.0:3000->3000/tcp, [::]:3000->3000/tcp
+kibana          docker.elastic.co/kibana/kibana:8.11.0                 "/bin/tini -- /usr/l…"   kibana          24 hours ago     Up 9 hours (healthy)   0.0.0.0:5601->5601/tcp, [::]:5601->5601/tcp
+```
+
+
+#### 2.4 Generar tráfico en Juice Shop (para crear logs)
+```bash
+for i in {1..10}; do
+  curl -s http://localhost:3000 > /dev/null
+  echo "Request $i"
+  sleep 1
+done
+```
+
+**Output**:
+```
+Request 1
+Request 2
+Request 3
+Request 4
+Request 5
+Request 6
+Request 7
+Request 8
+Request 9
+Request 10
+```
+
+#### 2.5 Esperar procesamiento
+```bash
+sleep 30
+```
+
+**Output**:
+```
+No pasa nada, solo espera
+```
+
+#### 2.6 Verificar índices creados
+```bash
+curl 'http://localhost:9200/_cat/indices?v'
+```
+
+**Output**:
+```
+health status index                                 uuid                   pri rep docs.count docs.deleted store.size pri.store.size dataset.size
+yellow open   filebeat-docker-2025.11.16            4jyvbGnkRX600sJuMLqRRg   1   1        259            0    138.5kb        138.5kb      138.5kb
+yellow open   filebeat-juice-shop-2025.11.23        c7L_smbTSRmbo5OBp0fgIQ   1   1         18            0    103.1kb        103.1kb      103.1kb
+yellow open   test-index                            _yowexlGRFahBdhJP3jutA   1   1          4            0     19.6kb         19.6kb       19.6kb
+yellow open   filebeat-juice-shop-2025.11.24        _pQt3ReCRJuUww3eoRkqCA   1   1         70            0    314.6kb        314.6kb      314.6kb
+yellow open   filebeat-nginx-2025.11.24             XieNSWLEQ0m6MlzFCkdpDg   1   1        121            0    165.5kb        165.5kb      165.5kb
+yellow open   filebeat-docker-2025.10.19            XMZJoBQmSIKc8rjxmLc6Yg   1   1         44            0     61.9kb         61.9kb       61.9kb
+yellow open   mi-indice                             8eGx6_v8SI2igU7C3MjrPg   1   1          1            0      6.3kb          6.3kb        6.3kb
+yellow open   filebeat-docker-2025.11.23            BBu3-P40RHa4591dZHaIfw   1   1       1662            0      5.1mb          5.1mb        5.1mb
+yellow open   .ds-filebeat-8.11.0-2025.11.23-000001 AXWk1FOUQYuQUPkciTNu4w   1   1          0            0       249b           249b         249b
+yellow open   filebeat-docker-2025.11.24            MIjDRFjqR8WvouKarHWbzw   1   1       1403            0        4mb            4mb          4mb
+yellow open   filebeat-docker-2025.11.25            36lvsjoFTvOcU-cHGprekQ   1   1        402            0      1.6mb          1.6mb        1.6mb
+```
+
+#### 2.7 Ver un log específico
+```bash
+curl -X GET "http://localhost:9200/filebeat-juice-shop-*/_search?size=1&pretty"
+```
+
+**Output**:
+```
+{
+  "took" : 3,
+  "timed_out" : false,
+  "_shards" : {
+    "total" : 2,
+    "successful" : 2,
+    "skipped" : 0,
+    "failed" : 0
+  },
+  "hits" : {
+    "total" : {
+      "value" : 88,
+      "relation" : "eq"
+    },
+    "max_score" : 1.0,
+    "hits" : [
+      {
+        "_index" : "filebeat-juice-shop-2025.11.23",
+        "_id" : "MaHXsZoBJv96vtqJzk4K",
+        "_score" : 1.0,
+        "_source" : {
+          "@timestamp" : "2025-11-23T17:49:15.826Z",
+          "message" : "info: Port 3000 is available (OK)",
+          "input" : {
+            "type" : "container"
+          },
+          "container" : {
+            "id" : "3be40ab1bfcd416430e896aa5118bd4f1ef6ef45c5360a5f18098dee7b7c00e2",
+            "image" : {
+              "name" : "proyecto_2-juice-shop"
+            },
+            "name" : "juice-shop",
+            "labels" : {
+...
+```
+
+
+#### 2.8 Verificar logs de Filebeat en detalle
+```bash
+docker compose logs filebeat --tail=50
+```
+
+**Output**:
+```
+filebeat  | {"log.level":"info","@timestamp":"2025-11-25T03:02:08.905Z","log.logger":"monitoring","log.origin":{"file.name":"log/log.go","file.line":187},"message":"Non-zero metrics in the last 30s","service.name":"filebeat","monitoring":{"metrics":{"beat":{"cgroup":{"memory":{"mem":{"usage":{"bytes":173268992}}}},"cpu":{"system":{"ticks":550,"time":{"ms":20}},"total":{"ticks":4110,"time":{"ms":80},"value":4110},"user":{"ticks":3560,"time":{"ms":60}}},"handles":{"limit":{"hard":1048576,"soft":1048576},"open":13},"info":{"ephemeral_id":"9684cd3e-598c-4c23-838a-f18d1828810b","uptime":{"ms":840082},"version":"8.11.0"},"memstats":{"gc_next":57906104,"memory_alloc":29090304,"memory_total":663320776,"rss":130048000},"runtime":{"goroutines":43}},"filebeat":{"events":{"active":0,"added":1,"done":1},"harvester":{"open_files":1,"running":1}},"libbeat":{"config":{"module":{"running":0}},"output":{"events":{"acked":1,"active":0,"batches":1,"total":1},"read":{"bytes":205},"write":{"bytes":2718}},"pipeline":{"clients":1,"events":{"active":0,"published":1,"total":1},"queue":{"acked":1}}},"registrar":{"states":{"current":4,"update":1},"writes":{"success":1,"total":1}},"system":{"load":{"1":0.99,"15":1.33,"5":1.27,"norm":{"1":0.0825,"15":0.1108,"5":0.1058}}}},"ecs.version":"1.6.0"}}
+filebeat  | {"log.level":"info","@timestamp":"2025-11-25T03:02:38.916Z","log.logger":"monitoring","log.origin":{"file.name":"log/log.go","file.line":187},"message":"Non-zero metrics in the last 30s","service.name":"filebeat","monitoring":{"metrics":{"beat":{"cgroup":{"memory":{"mem":{"usage":{"bytes":173010944}}}},"cpu":{"system":{"ticks":550},"total":{"ticks":4130,"time":{"ms":20},"value":4130},"user":{"ticks":3580,"time":{"ms":20}}},"handles":{"limit":{"hard":1048576,"soft":1048576},"open":13},"info":{"ephemeral_id":"9684cd3e-598c-4c23-838a-f18d1828810b","uptime":{"ms":870084},"version":"8.11.0"},"memstats":{"gc_next":57906104,"memory_alloc":29851576,"memory_total":664082048,"rss":130105344},"runtime":{"goroutines":43}},"filebeat":{"events":{"active":0,"added":1,"done":1},"harvester":{"open_files":1,"running":1}},"libbeat":{"config":{"module":{"running":0}},"output":{"events":{"acked":1,"active":0,"batches":1,"total":1},"read":{"bytes":205},"write":{"bytes":2712}},"pipeline":{"clients":1,"events":{"active":0,"published":1,"total":1},"queue":{"acked":1}}},"registrar":{"states":{"current":4,"update":1},"writes":{"success":1,"total":1}},"system":{"load":{"1":1.43,"15":1.35,"5":1.35,"norm":{"1":0.1192,"15":0.1125,"5":0.1125}}}},"ecs.version":"1.6.0"}}...
+```
 
 ### Screenshots
 
-[Mínimo 5 screenshots]
+
+#### Screenshot 2.1: Cluster Status
+![Docker levantado](./CAPTURAS/PASO4/paso1.png)
+
+**Descripción**: Filebeat levantado
+
+#### Screenshot 2.2: Filebeat Conectado
+![Filebeat Levantado](./CAPTURAS/PASO4/paso2.png)
+
+**Descripción**:  Logs de Filebeat conectándose.
+
+#### Screenshot 2.3: 
+![Índices](./CAPTURAS/PASO4/paso3.png)
+
+**Descripción**: Índices creados en Elasticsearch
+
+#### Screenshot 2.4: Cluster Status
+![Metadata](./CAPTURAS/PASO4/paso4.png)
+
+**Descripción**: Documento de ejemplo con metadata.
+
+#### Screenshot 2.5: Cluster Status
+![Filebeat kibana](./CAPTURAS/PASO4/paso5.png)
+
+**Descripción**: Discover con logs de Filebeat
 
 ### Problemas Encontrados
 
-[Documentar]
+Ninguno. Todos los servicios iniciaron correctamente y Filebeat se conectó a Elasticsearch sin inconvenientes. Los índices se crearon automáticamente y los logs se están recolectando según lo esperado.
 
 ### Verificación de Éxito
 
-- [ ] Filebeat corriendo sin errores
-- [ ] Conectado a Elasticsearch
-- [ ] Leyendo logs de Docker
-- [ ] Índices filebeat-* creados
-- [ ] Documentos con metadata completa
-- [ ] Screenshots capturados (5)
+- [x] Filebeat corriendo sin errores
+- [x] Conectado a Elasticsearch
+- [x] Leyendo logs de Docker
+- [x] Índices filebeat-* creados
+- [x] Documentos con metadata completa
+- [x] Screenshots capturados (5)
 
 ### Conceptos Aprendidos
 
-[Listar conceptos]
+1. Filebeat - El conector del stack ELK
+
+- Shipper ligero (~10-50MB RAM) diseñado específicamente para logs
+- Parte de la familia Beats (Filebeat, Metricbeat, Packetbeat, etc.)
+- Conecta aplicaciones con Elasticsearch sin modificar código
+
+2. Registry de Filebeat
+
+- Archivo que registra qué logs ya fueron leídos y hasta dónde
+- Previene duplicados y pérdida de datos
+- Permite reanudar procesamiento después de reinicios
+
+3. Procesadores (Processors)
+
+- add_docker_metadata: Enriquece logs con info del contenedor (nombre, ID, imagen)
+- decode_json_fields: Parsea campos JSON del mensaje
+- add_host_metadata: Agrega información del host (OS, IP)
+
+4. Índices dinámicos
+
+- Filebeat crea índices diferentes según condiciones
+- Ejemplo: filebeat-juice-shop-2025.11.24 vs filebeat-docker-2025.11.24
+- Facilita búsquedas y mantenimiento de logs
 
 ### Tiempo Invertido
 - **Estimado**: 1 hora
-- **Real**: ___ minutos
+- **Real**: 30 minutos
 
 ---
 
