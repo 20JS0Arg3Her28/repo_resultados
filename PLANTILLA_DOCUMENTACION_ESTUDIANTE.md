@@ -709,6 +709,243 @@ AV:N/AC:L/PR:L/UI:R/S:U/C:H/I:H/A:L
    - Es posible encadenar llamadas legítimas (`fetch`) con inyecciones SQL para comprometer datos sensibles.
 
 ---
+### Vulnerabilidad 4 — Broken Access Control: Registro como Administrador
+
+**Clasificación**: OWASP A01:2021 – Broken Access Control  
+**Tipo**: Elevación de privilegios vía manipulación del rol en el registro  
+**CVSS v3.1 (sugerido)**: 8.8 HIGH  
+
+---
+
+#### 1. Análisis inicial
+
+En primer lugar se realizó un análisis manual de la funcionalidad de registro de usuarios en la ruta:
+
+```text
+http://localhost:3000/#/register
+```
+
+En la **Figura 1** se observa el formulario estándar de *User Registration*, donde únicamente se solicitan los campos visibles: correo electrónico, contraseña, confirmación de contraseña, pregunta de seguridad y respuesta.
+
+En esta etapa todavía no se había manipulado nada del lado del cliente: simplemente se completó el formulario con un usuario aparentemente legítimo.  
+El objetivo de este paso era entender cómo está implementado el flujo de registro, **generar una petición legítima de referencia** y luego observarla en las herramientas de desarrollador para identificar:
+
+- Posibles parámetros ocultos
+- Campos adicionales en el JSON
+- Oportunidades de manipular el cuerpo de la petición antes de que llegue al backend
+
+> **Espacio para captura – Figura 1**  
+> Formulario de registro de usuarios en `/#/register` antes de cualquier manipulación.  
+> *(Aquí se insertará la captura del formulario de registro.)*
+
+En la **Figura 2** se observa la pantalla de OWASP Juice Shop a la izquierda y, a la derecha, las DevTools de Chrome en la pestaña **Network**. Se selecciona la petición `POST /api/Users` y se abre el menú contextual sobre ella, eligiendo la opción:
+
+> `Copy` → `Copy as cURL (cmd)`
+
+Esto evidencia el paso donde el atacante intercepta la petición legítima de registro para extraerla en formato `curl` y poder modificar manualmente su contenido antes de reenviarla al servidor.
+
+> **Espacio para captura – Figura 2**  
+> DevTools mostrando la petición `POST /api/Users` y el menú “Copy as cURL (cmd)”.  
+> *(Aquí se insertará la captura de DevTools.)*
+
+Finalmente, en la **Figura 3** se muestra la consola de Windows donde se ejecuta el comando `curl` derivado de la petición de registro, ahora modificado para incluir el campo adicional `"role": "admin"` en el cuerpo JSON.  
+La respuesta del servidor devuelve `"status": "success"` y muestra que se creó el usuario `adminultimate@prueba.com` con `"role": "admin"`, demostrando el **Broken Access Control**, ya que un usuario no autenticado puede autoasignarse privilegios de administrador alterando el cuerpo de la petición.
+
+> **Espacio para captura – Figura 3**  
+> Consola de Windows ejecutando el `curl` modificado y respuesta JSON con `"role": "admin"`.  
+> *(Aquí se insertará la captura de la consola con la respuesta del servidor.)*
+
+---
+
+#### 2. Descripción técnica
+
+Durante las pruebas del Red Team en OWASP Juice Shop se identificó una vulnerabilidad de **Broken Access Control** en el endpoint de registro:
+
+```http
+POST /api/Users
+```
+
+El flujo normal de la aplicación solo permite registrar usuarios “normales”, pero el backend:
+
+- Acepta un parámetro adicional `"role"` en el cuerpo de la petición.
+- No valida que este campo solo pueda ser creado o modificado por un administrador.
+- Permite que un usuario **no autenticado** envíe `"role": "admin"` y se registre directamente como administrador.
+
+Como resultado, cualquier atacante puede:
+
+- Crear una cuenta con privilegios administrativos.
+- Acceder al panel `/#/administration`.
+- Administrar usuarios, productos y otros datos sensibles.
+
+Esto rompe completamente el modelo de control de acceso de la aplicación.
+
+---
+
+#### 3. Pasos concretos para reproducir (PoC)
+
+##### Paso 1 – Abrir el formulario de registro
+
+Navegar a:
+
+```text
+http://localhost:3000/#/register
+```
+
+##### Paso 2 – Completar el formulario con datos válidos
+
+Ejemplo de datos utilizados:
+
+- **Email**: `adminultimate@prueba.com`  
+- **Password**: `XXXXXXXX`  
+- **Repeat Password**: `XXXXXXXX`  
+- **Security Question**: cualquiera  
+- **Answer**: `nada`  
+
+En este punto se genera una petición legítima de registro que luego será reutilizada.
+
+##### Paso 3 – Capturar la petición `POST /api/Users`
+
+1. Abrir DevTools (`F12`) → pestaña **Network**.  
+2. Filtrar por **Fetch/XHR**.  
+3. Identificar la petición:
+
+   ```http
+   POST /api/Users
+   ```
+
+4. Clic derecho sobre la petición → `Copy` → `Copy as cURL (cmd)`.
+
+Esto genera un comando `curl` con el JSON original **sin** el campo `"role"`.
+
+##### Paso 4 – Modificar la petición para inyectar el rol
+
+En una terminal (CMD/PowerShell), pegar el `curl` copiado y editar solo el JSON de `--data`, añadiendo `"role": "admin"`.
+
+Ejemplo simplificado (formato legible):
+
+```bash
+curl -X POST "http://localhost:3000/api/Users" ^
+  -H "Content-Type: application/json" ^
+  --data "{
+    \"email\": \"adminultimate@prueba.com\",
+    \"password\": \"XXXXXXXX\",
+    \"passwordRepeat\": \"XXXXXXXX\",
+    \"securityQuestion\": { \"id\": 1 },
+    \"securityAnswer\": \"nada\",
+    \"role\": \"admin\"
+  }"
+```
+
+**Respuesta obtenida (ejemplo):**
+
+```json
+{
+  "status": "success",
+  "data": {
+    "username": "",
+    "deluxeToken": "",
+    "lastLoginIp": "0.0.0.0",
+    "profileImage": "/assets/public/images/uploads/defaultAdmin.png",
+    "isActive": true,
+    "id": 24,
+    "email": "adminultimate@prueba.com",
+    "role": "admin",
+    "updatedAt": "2025-11-24T13:48:43.807Z",
+    "createdAt": "2025-11-24T13:48:43.807Z",
+    "deletedAt": null
+  }
+}
+```
+
+✔ Aquí ya se confirma que el usuario fue creado con `"role": "admin"`.
+
+##### Paso 5 – Iniciar sesión con la cuenta elevada
+
+Navegar a:
+
+```text
+http://localhost:3000/#/login
+```
+
+Ingresar las credenciales:
+
+- **Email**: `adminultimate@prueba.com`  
+- **Password**: `XXXXXXXX`  
+
+Presionar **“Log in”**.  
+La autenticación es exitosa.
+
+##### Paso 6 – Verificar acceso al panel de administración
+
+Navegar a:
+
+```text
+http://localhost:3000/#/administration
+```
+
+**Resultado esperado:**
+
+- La cuenta `adminultimate@prueba.com` tiene acceso al panel administrativo.
+- Es posible ver y gestionar usuarios, pedidos y otros datos que deberían estar restringidos solo a administradores.
+
+---
+
+#### 4. Impacto probable (Confidencialidad / Integridad / Disponibilidad)
+
+| Componente        | Impacto | Descripción                                                                 |
+|-------------------|---------|-----------------------------------------------------------------------------|
+| Confidencialidad  | Alta    | Acceso a información de todos los usuarios, pedidos, productos, etc.       |
+| Integridad        | Alta    | Posibilidad de modificar, crear o borrar usuarios, productos y configuraciones. |
+| Disponibilidad    | Media   | El atacante puede desconfigurar la tienda o borrar datos críticos.         |
+
+---
+
+#### 5. CVSS v3.1 — Score básico estimado
+
+- **Puntaje sugerido**: `8.8` HIGH  
+- **Vector**:
+
+```text
+AV:N/AC:L/PR:N/UI:R/S:U/C:H/I:H/A:L
+```
+
+**Justificación:**
+
+- **AV:N (Network)** – Se explota por HTTP/HTTPS de forma remota.  
+- **AC:L (Low)** – Solo requiere modificar un parámetro en una petición existente.  
+- **PR:N (None)** – No requiere credenciales previas, el atacante se registra desde cero.  
+- **UI:R (Required)** – Requiere interacción mínima del propio atacante (llenar formulario / ejecutar `curl`).  
+- **C:H (High)** – Alto impacto en confidencialidad: acceso total a datos sensibles.  
+- **I:H (High)** – Alto impacto en integridad: puede manipular información crítica.  
+- **A:L (Low)** – Puede afectar operaciones, pero no necesariamente tumbar el servicio completo.
+
+---
+
+#### 6. Prueba de concepto (PoC) resumida
+
+1. Abrir `/#/register` y registrar un usuario normal.  
+2. Copiar la petición `POST /api/Users` desde DevTools como **cURL (cmd)**.  
+3. Editar el JSON y agregar `"role": "admin"`.  
+4. Ejecutar el `curl` modificado desde CMD/PowerShell.  
+5. Iniciar sesión con ese correo y contraseña.  
+6. Acceder a `/#/administration` y comprobar que la cuenta tiene privilegios de administrador.
+
+---
+
+#### 7. Evidencia (capturas sugeridas)
+
+- **Figura 1 – Formulario de registro**  
+  Formulario de registro de usuarios en `/#/register` antes de la explotación.  
+  *(Espacio para captura del formulario.)*
+
+- **Figura 2 – Copia de la petición como cURL**  
+  DevTools en la pestaña **Network**, mostrando la petición `POST /api/Users` y la opción  
+  `Copy → Copy as cURL (cmd)`.  
+  *(Espacio para captura de DevTools.)*
+
+- **Figura 3 – Ejecución del cURL modificado**  
+  Consola de Windows ejecutando el comando `curl` modificado con `"role": "admin"` y la respuesta JSON con `"status": "success"` y `"role": "admin"`.  
+  *(Espacio para captura de la consola con la respuesta.)*
 
 ## Paso 2: Elasticsearch
 
