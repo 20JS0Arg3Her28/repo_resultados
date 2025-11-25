@@ -734,7 +734,7 @@ El objetivo de este paso era entender cómo está implementado el flujo de regis
 - Campos adicionales en el JSON
 - Oportunidades de manipular el cuerpo de la petición antes de que llegue al backend
 
-> **Espacio para captura – Figura 1**  
+
 > Formulario de registro de usuarios en `/#/register` antes de cualquier manipulación.  
 <img width="790" height="1036" alt="image" src="https://github.com/user-attachments/assets/911ce339-1675-4074-bcfe-c4a610d1f878" />
 
@@ -745,7 +745,7 @@ En la **Figura 2** se observa la pantalla de OWASP Juice Shop a la izquierda y, 
 
 Esto evidencia el paso donde el atacante intercepta la petición legítima de registro para extraerla en formato `curl` y poder modificar manualmente su contenido antes de reenviarla al servidor.
 
-> **Espacio para captura – Figura 2**  
+
 > DevTools mostrando la petición `POST /api/Users` y el menú “Copy as cURL (cmd)”.  
 <img width="940" height="646" alt="image" src="https://github.com/user-attachments/assets/4f0f54d9-7a5a-4b89-94a4-302d299dc0ee" />
 
@@ -753,7 +753,7 @@ Esto evidencia el paso donde el atacante intercepta la petición legítima de re
 Finalmente, en la **Figura 3** se muestra la consola de Windows donde se ejecuta el comando `curl` derivado de la petición de registro, ahora modificado para incluir el campo adicional `"role": "admin"` en el cuerpo JSON.  
 La respuesta del servidor devuelve `"status": "success"` y muestra que se creó el usuario `adminultimate@prueba.com` con `"role": "admin"`, demostrando el **Broken Access Control**, ya que un usuario no autenticado puede autoasignarse privilegios de administrador alterando el cuerpo de la petición.
 
-> **Espacio para captura – Figura 3**  
+
 > Consola de Windows ejecutando el `curl` modificado y respuesta JSON con `"role": "admin"`.  
 <img width="940" height="152" alt="image" src="https://github.com/user-attachments/assets/00ebddc1-4c04-4151-acb4-7f279f661a38" />
 
