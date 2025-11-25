@@ -444,11 +444,7 @@ Al ejecutar la búsqueda, el valor de `q` es inyectado en el DOM sin sanitizaci�
 
 ### 3. Evidencia
 
-> Aquí se deben incluir las capturas de pantalla tomadas durante la explotación, por ejemplo:
->
-> - *Screenshot 2.1*: Payload XSS ingresado en el campo de búsqueda.  
-> - *Screenshot 2.2*: Ventana emergente (`alert("xss")`) mostrada en el navegador.  
-> - *Screenshot 2.3*: Vista de la petición en Burp/ZAP o en los logs (con el parámetro `q` conteniendo el payload).
+<img width="940" height="535" alt="image" src="https://github.com/user-attachments/assets/3ac84d76-d0f8-48b5-97b1-07732c284c96" />
 
 ---
 
