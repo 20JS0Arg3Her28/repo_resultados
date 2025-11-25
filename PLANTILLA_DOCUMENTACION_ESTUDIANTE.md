@@ -125,7 +125,8 @@ done
 ### Screenshots
 
 #### Screenshot 1.1: Docker Compose PS
-![Docker Compose PS](./screenshots/paso-1/01-docker-compose-ps.png)
+<img width="940" height="483" alt="image" src="https://github.com/user-attachments/assets/89743f69-af46-446a-8e49-8ab5d1073424" />
+
 
 **Descripción**: Muestra el contenedor juice-shop corriendo en estado "Up" con el puerto 3000 mapeado.
 
@@ -135,7 +136,8 @@ done
 - [x] Sin errores visibles
 
 #### Screenshot 1.2: Interfaz Web de Juice Shop
-![Interfaz Juice Shop](./screenshots/paso-1/02-interfaz-web.png)
+<img width="940" height="534" alt="image" src="https://github.com/user-attachments/assets/09b2f0e0-f06e-40e0-b1bb-ee2053ba109a" />
+
 
 **Descripción**: Página principal de Juice Shop cargada correctamente en el navegador.
 
