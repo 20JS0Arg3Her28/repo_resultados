@@ -362,6 +362,158 @@ curl -X POST http://localhost:3000/rest/user/login \
 ✔ La autenticación fue completamente burlada  
 
 ---
+## Vulnerabilidad 2 — DOM Cross-Site Scripting (XSS reflejado en buscador)
+
+**Clasificación**: OWASP A03:2021 – Injection (Cross-Site Scripting)  
+**Tipo**: DOM / Reflected XSS (ejecutado desde `#/search?q=`)  
+**CVSS v3.1**: 7.4 – HIGH  
+
+---
+
+### 1. Descripción técnica
+
+Durante las pruebas del Red Team en OWASP Juice Shop se identificó una vulnerabilidad de **DOM-based / Reflected Cross-Site Scripting (XSS)** en el módulo de búsqueda.
+
+El parámetro `q` de la ruta:
+
+```text
+http://localhost:3000/#/search?q=...
+```
+
+se utiliza directamente en el DOM del frontend para construir la página de resultados de búsqueda, **sin aplicar**:
+
+- codificación / escape de caracteres especiales,
+- sanitización de etiquetas HTML,
+- ni validación de contenido.
+
+El valor de `q` se inyecta en el HTML mediante JavaScript del lado del cliente (Angular) usando una propiedad equivalente a `innerHTML`.
+
+Como resultado, un atacante puede insertar **código JavaScript arbitrario** que se ejecuta en el navegador de cualquier usuario que abra un enlace malicioso con ese parámetro. Esto permite:
+
+- robo de cookies / token JWT,
+- modificación del contenido visual de la página (DOM),
+- redirección a sitios maliciosos,
+- ejecución de acciones en nombre del usuario autenticado.
+
+> Importante: Este XSS es **DOM-based y reflejado**, ya que el _payload_ va en la URL (`q`) y se procesa directamente en el navegador, no en el backend.
+
+---
+
+### 2. Pasos concretos para reproducir (PoC)
+
+#### Paso 1 – Acceder a la aplicación vulnerable
+
+URL base:
+
+```text
+http://localhost:3000/
+```
+
+No es necesario estar autenticado para disparar el XSS (solo se requiere que la víctima abra el enlace).
+
+#### Paso 2 – Inyectar el payload XSS en el buscador
+
+1. En la parte superior derecha, hacer clic en el ícono de la lupa (**Search**).  
+2. Escribir en el campo de búsqueda el siguiente payload:
+
+```html
+<iframe src="javascript:alert(`xss`)">
+```
+
+3. Presionar **Enter**.
+
+Alternativamente, se puede llamar directamente a la ruta:
+
+```text
+http://localhost:3000/#/search?q=<iframe src="javascript:alert(`xss`)">
+```
+
+(el navegador lo codificará automáticamente como `%3Ciframe...`).
+
+#### Paso 3 – Activar el XSS
+
+Al ejecutar la búsqueda, el valor de `q` es inyectado en el DOM sin sanitización.
+
+**Resultado observado (PoC):**
+
+- Se muestra una ventana emergente del navegador con el texto: `xss`.
+- Se cumple el reto de **DOM XSS** de Juice Shop.
+- Se confirma la ejecución de JavaScript arbitrario en el contexto de la aplicación.
+
+---
+
+### 3. Evidencia
+
+> Aquí se deben incluir las capturas de pantalla tomadas durante la explotación, por ejemplo:
+>
+> - *Screenshot 2.1*: Payload XSS ingresado en el campo de búsqueda.  
+> - *Screenshot 2.2*: Ventana emergente (`alert("xss")`) mostrada en el navegador.  
+> - *Screenshot 2.3*: Vista de la petición en Burp/ZAP o en los logs (con el parámetro `q` conteniendo el payload).
+
+---
+
+### 4. Impacto probable (CID)
+
+| Componente       | Impacto | Descripción                                                                 |
+|------------------|--------:|-----------------------------------------------------------------------------|
+| Confidencialidad |  Alta   | Robo de cookies de sesión, tokens JWT y otros datos sensibles del usuario. |
+| Integridad       |  Alta   | Modificación del DOM, envío de peticiones en nombre del usuario.           |
+| Disponibilidad   |  Media  | Bloqueo de la interfaz, redirecciones o loops de ejecución de JS.          |
+
+---
+
+### 5. CVSS v3.1 — Score básico estimado
+
+**Puntaje**: `7.4 – HIGH`  
+
+**Vector:**
+
+```text
+AV:N/AC:L/PR:N/UI:R/S:U/C:H/I:H/A:L
+```
+
+**Justificación de cada métrica:**
+
+- **AV:N (Network)** – Se explota remotamente vía HTTP/URL.  
+- **AC:L (Low)** – El payload es trivial y no requiere condiciones especiales.  
+- **PR:N (None)** – No se requieren privilegios previos.  
+- **UI:R (Required)** – La víctima debe abrir el enlace o usar la búsqueda manipulada.  
+- **S:U (Unchanged)** – El impacto se limita al propio sitio Juice Shop.  
+- **C:H (High)** – Se pueden robar tokens y datos sensibles.  
+- **I:H (High)** – Se puede manipular el contenido de la página (DOM) y acciones del usuario.  
+- **A:L (Low)** – Puede degradar la disponibilidad (bloqueos, redirecciones), pero no necesariamente tumbar el servicio.
+
+---
+
+### 6. Prueba de Concepto (PoC) – Petición HTTP (Blue Team / Logs)
+
+Aunque el XSS se ejecuta en el navegador (**DOM-based**), el Blue Team puede detectar el ataque revisando las peticiones HTTP donde aparezca el payload en el parámetro `q`.
+
+Ejemplo de petición usando `curl` (el payload va URL-encoded):
+
+```bash
+curl "http://localhost:3000/rest/products/search?q=%3Ciframe%20src%3D%22javascript%3Aalert%28%60xss%60%29%22%3E"
+```
+
+En esta petición, el parámetro `q` contiene la versión codificada de:
+
+```html
+<iframe src="javascript:alert(`xss`)">
+```
+
+En los logs del servidor, de Filebeat/Elasticsearch o de un WAF, se puede buscar este patrón para detectar intentos de XSS.
+
+---
+
+### 7. Explicación de por qué funciona
+
+- El parámetro `q` se toma desde la URL (`#/search?q=...`) y se procesa en el frontend.  
+- En lugar de escapar el contenido, la aplicación lo inyecta directamente en el DOM usando algo equivalente a `innerHTML`.  
+- El navegador interpreta este contenido como HTML y ejecuta la parte JavaScript (`javascript:alert('xss')`).  
+- Cualquier usuario que abra un enlace con ese `q` verá ejecutarse el código del atacante en su navegador.
+
+Esta vulnerabilidad permite construir enlaces maliciosos que, al ser abiertos por usuarios legítimos (especialmente si están autenticados), comprometen la seguridad de sus sesiones y datos en OWASP Juice Shop.
+
 
 ## Paso 2: Elasticsearch
 
