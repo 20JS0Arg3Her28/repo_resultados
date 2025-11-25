@@ -224,6 +224,8 @@ Abrir en el navegador:
 ```text
 http://localhost:3000/#/login
 ```
+<img width="940" height="531" alt="image" src="https://github.com/user-attachments/assets/a0a2d8e3-86a4-43c4-bf1c-6eebf46837e7" />
+
 
 ##### Paso 2 — Inyectar el payload en el campo *Email*
 
@@ -308,6 +310,7 @@ AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H
 - **A:H (Availability: High)** → Posibilidad de borrar datos y afectar seriamente la disponibilidad.  
 
 ---
+<img width="940" height="306" alt="image" src="https://github.com/user-attachments/assets/f4f962f3-2ecb-4964-b809-3464bf6aef09" />
 
 #### 6. Prueba de concepto (PoC) reproducible
 
