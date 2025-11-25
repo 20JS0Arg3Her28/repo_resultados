@@ -1034,6 +1034,7 @@ GET /filebeat-juice-shop-*/_search
 
 #### Screenshot 5.12: Dashboard Interactivo
 ![Interactive](./CAPTURAS/PASO5/interactive.png)
+![Ataque](./CAPTURAS/PASO5/attack.png)
 
 ### Problemas Encontrados
 
