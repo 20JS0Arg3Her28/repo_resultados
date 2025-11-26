@@ -446,27 +446,10 @@ AV:N/AC:L/PR:N/UI:R/S:U/C:H/I:H/A:L
 
 ---
 
-### 6. Prueba de Concepto (PoC) – Petición HTTP (Blue Team / Logs)
-
-Aunque el XSS se ejecuta en el navegador (**DOM-based**), el Blue Team puede detectar el ataque revisando las peticiones HTTP donde aparezca el payload en el parámetro `q`.
-
-Ejemplo de petición usando `curl` (el payload va URL-encoded):
-
-```bash
-curl "http://localhost:3000/rest/products/search?q=%3Ciframe%20src%3D%22javascript%3Aalert%28%60xss%60%29%22%3E"
-```
-
-En esta petición, el parámetro `q` contiene la versión codificada de:
-
-```html
-<iframe src="javascript:alert(`xss`)">
-```
-
-En los logs del servidor, de Filebeat/Elasticsearch o de un WAF, se puede buscar este patrón para detectar intentos de XSS.
 
 ---
 
-### 7. Explicación de por qué funciona
+### 6. Explicación de por qué funciona
 
 - El parámetro `q` se toma desde la URL (`#/search?q=...`) y se procesa en el frontend.  
 - En lugar de escapar el contenido, la aplicación lo inyecta directamente en el DOM usando algo equivalente a `innerHTML`.  
