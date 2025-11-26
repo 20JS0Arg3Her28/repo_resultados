@@ -1156,7 +1156,30 @@ git checkout paso-6-blue-team
 **Archivo**: `scripts/blue-team-traffic.sh`
 
 ```bash
-[Pegar contenido del script]
+#!/bin/bash
+# Script de tráfico legítimo para Blue Team
+# Genera requests normales para establecer baseline
+
+echo "=== Iniciando tráfico legítimo Blue Team ==="
+echo "Timestamp: $(date -u)"
+
+ENDPOINTS=(
+  "http://localhost:3000"
+  "http://localhost:3000/#/login"
+  "http://localhost:3000/rest/products/search?q=apple"
+  "http://localhost:3000/rest/products/search?q=juice"
+  "http://localhost:3000/api/Products"
+)
+
+for url in "${ENDPOINTS[@]}"; do
+  curl -s "$url" > /dev/null
+  echo "$(date -u) OK $url"
+  sleep 5
+done
+
+echo "=== Tráfico legítimo completado ==="
+echo "Timestamp: $(date -u)"
+
 ```
 
 **Ejecución**:
@@ -1166,7 +1189,15 @@ git checkout paso-6-blue-team
 
 **Output**:
 ```
-[Pegar output]
+=== Iniciando tráfico legítimo Blue Team ===
+Timestamp: Tue Nov 25 11:39:51 PM UTC 2025
+Tue Nov 25 11:39:51 PM UTC 2025 OK http://localhost:3000
+Tue Nov 25 11:39:56 PM UTC 2025 OK http://localhost:3000/#/login
+Tue Nov 25 11:40:01 PM UTC 2025 OK http://localhost:3000/rest/products/search?q=apple
+Tue Nov 25 11:40:06 PM UTC 2025 OK http://localhost:3000/rest/products/search?q=juice
+Tue Nov 25 11:40:11 PM UTC 2025 OK http://localhost:3000/api/Products
+=== Tráfico legítimo completado ===
+Timestamp: Tue Nov 25 11:40:16 PM UTC 2025
 ```
 
 #### 6.2 Configuración de Reglas de Detección
@@ -1216,10 +1247,15 @@ http.response.status_code: (400 or 401 or 403 or 404 or 500 or 503)
 
 **Prueba 1: SQL Injection**
 ```bash
-curl "http://localhost:3000/rest/products/search?q=' OR 1=1 --"
+curl "http://localhost:3000/rest/products/search?q='%20OR%20'1'='1"
 ```
 
-**Resultado**: [Describir si se detectó]
+```
+"status":"success","data":[{"id":1,"name":"Apple Juice (1000ml)","description":"The all-time classic.","price":1.99,"deluxePrice":0.99,"image":"apple_juice.jpg","createdAt":"2025-11-25 17:26:14.357 +00:00","updatedAt":"2025-11-25 17:26:14.357 +00:00","deletedAt":null},{"id":24,"name":"Apple Pomace","description":"Finest pressings of apples. Allergy disclaimer: Might contain traces of worms. Can be <a href=\"/#recycle\">sent back to us</a> for recycling.","price":0.89,"deluxePrice":0.89,"image":"apple_pressings.jpg","createdAt":"2025-11-25 17:26:14.364 +00:00","updatedAt":"2025-11-25 17:26:14.364 +00:00","deletedAt":null},{"id":6,"name":"Banana Juice (1000ml)","description":"Monkeys love it the most.","price":1.99,"deluxePrice":1.99,"image":"banana_juice.jpg","createdAt":"2025-11-25 17:26:14.358 +00:00","updatedAt":"2025-11-25 17:26:14.358 +00:00","deletedAt":null},{"id":42,"name":"Best Juice Shop Salesman Artwork","description":"Unique digital painting depicting Stan, our most qualified and almost profitable salesman. He made a succesful carreer in selling used ships, coffins, krypts, crosses, real estate, life insurance, restaurant supplies, voodoo enhanced asbestos and courtroom souvenirs before <em>finally</em> adding his expertise to the Juice Shop marketing team.","price":5000,"deluxePrice":5000,"image":"artwork2.jpg","createdAt":"2025-11-25 17:26:14.366 +00:00","updatedAt":"2025-11-25 17:26:14.366 +00:00","deletedAt":null},{"id":30,"name":"Carrot Juice (1000ml)","description":"As the old German saying goes: \"Carrots are good for the eyes. Or has anyone ever seen a rabbit with glasses?\"","price":2.99,"deluxePrice":2.99,"image":"carrot_juice.jpeg","createdAt":"2025-11-25 17:26:14.365 +00:00","updatedAt":"2025-11-25 17:26:14.365 +00:00","deletedAt":null},{"id":3,"name":"Eggfruit Juice (500ml)","description":"Now with even more exotic flavour.","price":8.99,"deluxePrice":8.99,"image":"eggfruit_juice.jpg","createdAt":"2025-11-25 17:26:14.357 +00:00","updatedAt":"2025-11-25 17:26:14.357 +00:00","deletedAt":null},{"id":25,"name":"Fruit Press","description":"Fruits go in. Juice comes out. Pomace you can send back to us for recycling purposes.","price":89.99,"deluxePrice":89.99,"image":"fruit_press.jpg","createdAt":"2025-11-25 17:26:14.364 +00:00","updatedAt":"2025-11-25 17:26:14.364 +00:00","deletedAt":null},{"id":22,"name":"Green Smoothie","description":"Looks poisonous but is actually very good for your health! Made from green cabbage, spinach, kiwi and grass.","price":1.99,"deluxePrice":1.99,"image":"green_smoothie.jpg","createdAt":"2025-11-25 17:26:14.362 +00:00","updatedAt":"2025-11-25 17:26:14.362 +00:00","deletedAt":null},{"id":41,"name":"Juice Shop \"Permafrost\" 2020 Edition","description":"Exact version of <a href=\"https://github.com/juice-shop/juice-shop/releases/tag/v9.3.1-PERMAFROST\">OWASP Juice Shop that was archived on 02/02/2020</a> by the GitHub Archive Program and ultimately went into the <a href=\"https://github.blog/2020-07-16-github-archive-program-the-journey-of-the-worlds-open-source-code-to-the-arctic\">Arctic Code Vault</a> on July 8. 2020 where it will be safely stored for at least 1000 years.","price":9999.99,"deluxePrice":9999.99,"image":"permafrost.jpg","createdAt":...
+```
+
+**Resultado**: En este caso, no se tiene presente el SQL INJECTION, se detecto uno, pero con input incompleto, esta era el que se nos 
+habia proveido, cuando se coloco el que esta ahora, si devolvio la peticion, pero no lo detecto, o al menos, no fue visible.
 
 **Prueba 2: XSS**
 ```bash
@@ -1301,7 +1337,7 @@ done
 ### Screenshots
 
 #### Screenshot 6.1: Script de Tráfico
-![Script](./screenshots/paso-6/01-script-trafico.png)
+![Script](./CAPTURAS/PASO6/traficoBlueTeam.png)
 
 #### Screenshot 6.2: Reglas de Detección
 ![Reglas](./screenshots/paso-6/02-reglas-deteccion.png)
@@ -1316,7 +1352,7 @@ done
 ![Burst Rule](./screenshots/paso-6/05-regla-burst.png)
 
 #### Screenshot 6.6: Ataque SQLi Simulado
-![SQLi Attack](./screenshots/paso-6/06-ataque-sqli.png)
+![SQLi Attack](./CAPTURAS/PASO6/sqlAttack.png)
 
 #### Screenshot 6.7: Ataque XSS Simulado
 ![XSS Attack](./screenshots/paso-6/07-ataque-xss.png)
