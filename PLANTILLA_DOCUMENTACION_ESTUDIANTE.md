@@ -2253,9 +2253,7 @@ curl -X POST http://localhost:3000/rest/user/login \
 
 ### Arquitectura Completa del Sistema
 
-```
-[Dibujar o pegar diagrama de arquitectura]
-```
+![img](./CAPTURAS/Arqui.png)
 
 **Componentes**:
 1. **Juice Shop**: [Explicar rol]
